@@ -1,0 +1,57 @@
+name: CodeQL Analysis
+
+on:
+  push:
+    branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+
+env:
+  JAVA_VERSION: '21'
+  WORKING_DIRECTORY: 'petstore-feature5-backend'
+
+jobs:
+  analyze:
+    name: Analyze with CodeQL
+    runs-on: ubuntu-22.04
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Build with Maven
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B clean package -DskipTests
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

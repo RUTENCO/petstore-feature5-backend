@@ -3,7 +3,7 @@ package com.petstore.backend.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "role", schema = "public")
+@Table(name = "roles", schema = "public")
 public class Role {
     
     @Id

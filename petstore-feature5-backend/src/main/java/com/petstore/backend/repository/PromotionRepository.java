@@ -16,6 +16,18 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'ACTIVE'")
     List<Promotion> findActivePromotions();
     
+    // Buscar promociones expiradas
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'EXPIRED'")
+    List<Promotion> findExpiredPromotions();
+    
+    // Buscar promociones programadas
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'SCHEDULE'")
+    List<Promotion> findScheduledPromotions();
+    
+    // Buscar promociones por estado específico
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = :statusName")
+    List<Promotion> findByStatusName(@Param("statusName") String statusName);
+    
     // Buscar promociones por categoría
     List<Promotion> findByCategoryCategoryId(Integer categoryId);
     

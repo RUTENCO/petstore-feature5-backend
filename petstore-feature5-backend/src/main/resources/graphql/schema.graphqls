@@ -1,4 +1,4 @@
-# Pet Store GraphQL Schema - Basado en esquema Supabase
+# Pet Store GraphQL Schema - Basado en esquema Neon
 
 type Query {
     # Health check
@@ -10,6 +10,9 @@ type Query {
     # Queries de promociones
     promotions: [Promotion!]!
     promotionsActive: [Promotion!]!
+    promotionsExpired: [Promotion!]!
+    promotionsScheduled: [Promotion!]!
+    promotionsByStatus(statusName: String!): [Promotion!]!
     promotionsByCategory(categoryId: ID!): [Promotion!]!
     promotion(id: ID!): Promotion
     
@@ -25,7 +28,7 @@ type Query {
 
 type Mutation {
     # Mutaciones de autenticación
-    login(email: String!, password: String!): LoginResponse!
+    login(email: String!, password: String!): GraphQLLoginResponse!
     
     # Mutaciones de promociones (solo admin)
     createPromotion(input: PromotionInput!): Promotion!
@@ -80,9 +83,9 @@ type Role {
     roleName: String!
 }
 
-type LoginResponse {
+type GraphQLLoginResponse {
     token: String!
-    user: User!
+    user: User
     success: Boolean!
 }
 
@@ -93,6 +96,7 @@ input PromotionInput {
     endDate: String!
     discountValue: Float!
     statusId: ID!
+    userId: ID
     categoryId: ID
 }
 

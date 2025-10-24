@@ -1,0 +1,121 @@
+name: deployment in Render
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'petstore-feature5-backend/**'
+      - '.github/workflows/**'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - 'petstore-feature5-backend/**'
+
+env:
+  JAVA_VERSION: '21'
+  WORKING_DIRECTORY: 'petstore-feature5-backend'
+
+jobs:
+  avoid_redundancy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Cancel redundant builds
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+  lint:
+    name: Code Quality Check
+    needs: avoid_redundancy
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
+
+      - name: Run Maven build
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B clean verify
+
+      - name: Check code style with Checkstyle
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn checkstyle:check
+        continue-on-error: false
+
+      - name: Upload Checkstyle Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-results
+          path: ${{ env.WORKING_DIRECTORY }}/target/checkstyle-result.xml
+        continue-on-error: true
+
+  build:
+    needs: [lint]
+    name: Build Docker Image
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Push Docker Image
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: docker build -t petstore-backend:latest .
+
+  test:
+    name: Unit and Integration Tests
+    needs: [ lint, build ]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
+
+      - name: Execute Maven Tests
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ env.WORKING_DIRECTORY }}/target/surefire-reports
+
+  e2e:
+    needs: [lint, build]
+    name: End-to-End Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: echo "There's no tests to run yet"
+
+  deploy:
+    name: Deploy to Render
+    needs: [lint, test, e2e]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy Hook
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}

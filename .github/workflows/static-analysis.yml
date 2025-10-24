@@ -1,0 +1,52 @@
+name: Static Analysis - Checkstyle Only
+
+on:
+  push:
+    branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+
+env:
+  JAVA_VERSION: '21'
+  WORKING_DIRECTORY: 'petstore-feature5-backend'
+
+jobs:
+  checkstyle:
+    name: Run Checkstyle Analysis
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
+
+      - name: Build project (compile only)
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B clean compile -Dmaven.test.skip=true
+
+      - name: Clean previous reports
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: rm -rf target/site/*
+
+      - name: Run Checkstyle
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn checkstyle:checkstyle -Dmaven.test.skip=true --batch-mode
+
+      - name: Upload Checkstyle HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-html-report
+          path: ${{ env.WORKING_DIRECTORY }}/target/site/checkstyle.html

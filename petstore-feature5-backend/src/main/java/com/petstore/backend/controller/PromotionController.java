@@ -1,13 +1,17 @@
 package com.petstore.backend.controller;
 
-import com.petstore.backend.dto.PromotionDTO;
-import com.petstore.backend.dto.PromotionListResponse;
-import com.petstore.backend.service.PromotionService;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.service.PromotionService;
 
 @RestController
 @RequestMapping("/api/promotions")
@@ -22,20 +26,12 @@ public class PromotionController {
      * GET /api/promotions
      */
     @GetMapping
-    public ResponseEntity<PromotionListResponse> getAllActivePromotions() {
+    public ResponseEntity<List<PromotionDTO>> getAllActivePromotions() {
         try {
             List<PromotionDTO> promotions = promotionService.getAllActivePromotions();
-            
-            PromotionListResponse response = PromotionListResponse.success(promotions);
-            
-            return ResponseEntity.ok(response);
-            
+            return ResponseEntity.ok(promotions);
         } catch (Exception e) {
-            PromotionListResponse errorResponse = PromotionListResponse.error(
-                "Error al obtener las promociones: " + e.getMessage()
-            );
-            
-            return ResponseEntity.status(500).body(errorResponse);
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -44,20 +40,12 @@ public class PromotionController {
      * GET /api/promotions/all
      */
     @GetMapping("/all")
-    public ResponseEntity<PromotionListResponse> getAllPromotions() {
+    public ResponseEntity<List<PromotionDTO>> getAllPromotions() {
         try {
             List<PromotionDTO> promotions = promotionService.getAllPromotions();
-            
-            PromotionListResponse response = PromotionListResponse.success(promotions);
-            
-            return ResponseEntity.ok(response);
-            
+            return ResponseEntity.ok(promotions);
         } catch (Exception e) {
-            PromotionListResponse errorResponse = PromotionListResponse.error(
-                "Error al obtener todas las promociones: " + e.getMessage()
-            );
-            
-            return ResponseEntity.status(500).body(errorResponse);
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -66,20 +54,12 @@ public class PromotionController {
      * GET /api/promotions/category/{categoryId}
      */
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<PromotionListResponse> getPromotionsByCategory(@PathVariable Integer categoryId) {
+    public ResponseEntity<List<PromotionDTO>> getPromotionsByCategory(@PathVariable Integer categoryId) {
         try {
             List<PromotionDTO> promotions = promotionService.getPromotionsByCategory(categoryId);
-            
-            PromotionListResponse response = PromotionListResponse.success(promotions);
-            
-            return ResponseEntity.ok(response);
-            
+            return ResponseEntity.ok(promotions);
         } catch (Exception e) {
-            PromotionListResponse errorResponse = PromotionListResponse.error(
-                "Error al obtener promociones por categoría: " + e.getMessage()
-            );
-            
-            return ResponseEntity.status(500).body(errorResponse);
+            return ResponseEntity.internalServerError().build();
         }
     }
 
@@ -88,20 +68,12 @@ public class PromotionController {
      * GET /api/promotions/valid
      */
     @GetMapping("/valid")
-    public ResponseEntity<PromotionListResponse> getValidPromotions() {
+    public ResponseEntity<List<PromotionDTO>> getValidPromotions() {
         try {
             List<PromotionDTO> promotions = promotionService.getValidPromotions();
-            
-            PromotionListResponse response = PromotionListResponse.success(promotions);
-            
-            return ResponseEntity.ok(response);
-            
+            return ResponseEntity.ok(promotions);
         } catch (Exception e) {
-            PromotionListResponse errorResponse = PromotionListResponse.error(
-                "Error al obtener promociones vigentes: " + e.getMessage()
-            );
-            
-            return ResponseEntity.status(500).body(errorResponse);
+            return ResponseEntity.internalServerError().build();
         }
     }
 

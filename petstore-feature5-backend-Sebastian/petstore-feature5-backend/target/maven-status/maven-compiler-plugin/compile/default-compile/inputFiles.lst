@@ -1,34 +1,46 @@
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\config\CorsConfig.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\config\GraphQLConfig.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\config\JwtAuthenticationFilter.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\config\SecurityConfig.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\controller\AuthController.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\controller\ProductController.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\controller\PromotionController.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\CategoryDTO.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\CreatePromotionInput.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\LoginRequest.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\LoginResponse.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\ProductDTO.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\ProductListResponse.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\PromotionDTO.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\dto\PromotionListResponse.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\Category.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\Product.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\Promotion.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\Role.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\Status.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\entity\User.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\exception\GlobalExceptionHandler.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\graphql\GraphQLResolver.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\PetstoreFeature5BackendApplication.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\CategoryRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\ProductRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\PromotionRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\RoleRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\StatusRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\repository\UserRepository.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\service\AuthService.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\service\ProductService.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\service\PromotionService.java
-C:\Users\jsnar\Downloads\petstore-feature5-backend-jesus\petstore-feature5-backend\src\main\java\com\petstore\backend\util\JwtUtil.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\CorsConfig.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\GraphQLConfig.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\JwtAuthenticationFilter.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\OpenApiConfig.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\PasswordConfig.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\ProfileAwareRunner.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\config\SecurityConfig.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\controller\AuthController.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\controller\CategoryController.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\controller\ProductController.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\controller\PromotionController.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\CategoryDTO.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\LoginRequest.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\LoginResponse.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\ProductDTO.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\PromotionDeletedDTO.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\PromotionDTO.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\dto\UserResponseDTO.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\Category.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\Product.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\Promotion.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\PromotionDeleted.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\Role.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\Status.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\entity\User.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\exception\GlobalExceptionHandler.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\graphql\GraphQLResolver.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\CategoryMapper.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\MapperFacade.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\ProductMapper.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\PromotionDeletedMapper.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\PromotionMapper.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\mapper\UserMapper.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\PetstoreFeature5BackendApplication.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\CategoryRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\ProductRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\PromotionDeletedRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\PromotionRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\RoleRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\StatusRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\repository\UserRepository.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\service\AuthService.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\service\CategoryService.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\service\ProductService.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\service\PromotionService.java
+C:\Users\jsnar\Downloads\juan\Semestre 2025-2\ArquiSoft\Swagger Prueba\src\main\java\com\petstore\backend\util\JwtUtil.java

@@ -10,4 +10,6 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Integer> {
     List<Product> findByCategoryCategoryId(Integer categoryId);
     List<Product> findByPromotionPromotionId(Integer promotionId);
+    List<Product> findByProductNameContainingIgnoreCase(String productName);
+    List<Product> findByBasePriceBetween(Double minPrice, Double maxPrice);
 }

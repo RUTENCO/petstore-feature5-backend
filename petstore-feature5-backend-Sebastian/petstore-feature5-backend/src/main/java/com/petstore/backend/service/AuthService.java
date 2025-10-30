@@ -36,7 +36,12 @@ public class AuthService implements UserDetailsService {
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado o no es Marketing Admin"));
 
         // Verificar contraseña (en producción usar passwordEncoder.matches)
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        /* if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Contraseña incorrecta");
+        } */
+
+        // Verificar contraseña para pruebas (sin encriptar)
+        if (!password.equals(user.getPassword())) {
             throw new RuntimeException("Contraseña incorrecta");
         }
 

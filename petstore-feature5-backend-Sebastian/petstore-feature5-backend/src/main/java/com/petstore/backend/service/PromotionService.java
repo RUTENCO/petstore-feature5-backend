@@ -1,40 +1,47 @@
 package com.petstore.backend.service;
 
-import com.petstore.backend.dto.CategoryDTO;
-import com.petstore.backend.dto.PromotionDTO;
-import com.petstore.backend.entity.Promotion;
-import com.petstore.backend.repository.PromotionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
-import com.petstore.backend.dto.CreatePromotionInput;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.petstore.backend.dto.CategoryDTO;
+import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.dto.PromotionDeletedDTO;
 import com.petstore.backend.entity.Category;
+import com.petstore.backend.entity.Promotion;
+import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.PromotionDeletedRepository;
+import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
 import com.petstore.backend.repository.UserRepository;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.time.LocalDate;
-import java.util.Locale;
-
 
 @Service
 public class PromotionService {
 
     @Autowired
     private PromotionRepository promotionRepository;
-    @Autowired
-    private CategoryRepository categoryRepository;
+    
     @Autowired
     private StatusRepository statusRepository;
+    
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private CategoryRepository categoryRepository;
+    
+    @Autowired
+    private PromotionDeletedRepository promotionDeletedRepository;
 
     /**
      * Obtiene todas las promociones activas y vigentes
@@ -151,6 +158,27 @@ public class PromotionService {
     }
 
     /**
+     * Obtiene promociones expiradas como entidades para GraphQL
+     */
+    public List<Promotion> getAllExpiredPromotionsEntities() {
+        return promotionRepository.findExpiredPromotions();
+    }
+
+    /**
+     * Obtiene promociones programadas como entidades para GraphQL
+     */
+    public List<Promotion> getAllScheduledPromotionsEntities() {
+        return promotionRepository.findScheduledPromotions();
+    }
+
+    /**
+     * Obtiene promociones por estado específico como entidades para GraphQL
+     */
+    public List<Promotion> getPromotionsByStatusEntities(String statusName) {
+        return promotionRepository.findByStatusName(statusName);
+    }
+
+    /**
      * Obtiene promociones por categoría como entidades para GraphQL
      */
     public List<Promotion> getPromotionsByCategoryEntities(Integer categoryId) {
@@ -164,71 +192,235 @@ public class PromotionService {
         return promotionRepository.findById(id).orElse(null);
     }
 
+    // === MÉTODOS CRUD PARA MUTACIONES ===
+
     /**
-     * Crea una nueva promoción desde la entrada DTO
+     * Crea una nueva promoción
      */
-    public Promotion createPromotion(CreatePromotionInput input) {
-        // 1) Autenticación y autorización
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
-            throw new RuntimeException("No autenticado");
+    public Promotion createPromotion(String promotionName, String description, 
+                                   LocalDate startDate, LocalDate endDate, 
+                                   Double discountValue, Integer statusId, 
+                                   Integer userId, Integer categoryId) {
+        Promotion promotion = new Promotion();
+        promotion.setPromotionName(promotionName);
+        promotion.setDescription(description);
+        promotion.setStartDate(startDate);
+        promotion.setEndDate(endDate);
+        promotion.setDiscountValue(discountValue);
+        
+        // Buscar y asignar entidades relacionadas
+        if (statusId != null) {
+            Status status = statusRepository.findById(statusId).orElse(null);
+            promotion.setStatus(status);
         }
-        // Verificamos que el usuario sea Marketing Admin
-        User current = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        if (current.getRole() == null || !"Marketing Admin".equals(current.getRole().getRoleName())) {
-            throw new RuntimeException("No autorizado: se requiere rol Marketing Admin");
+        
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            promotion.setUser(user);
         }
+        
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId).orElse(null);
+            promotion.setCategory(category);
+        }
+        
+        return promotionRepository.save(promotion);
+    }
 
-        // 2) Validaciones de entrada
-        if (input.getPromotionName() == null || input.getPromotionName().isBlank()) {
-            throw new RuntimeException("promotionName es requerido");
+    /**
+     * Actualiza una promoción existente
+     */
+    public Promotion updatePromotion(Integer promotionId, String promotionName, String description,
+                                   LocalDate startDate, LocalDate endDate,
+                                   Double discountValue, Integer statusId,
+                                   Integer userId, Integer categoryId) {
+        Promotion promotion = promotionRepository.findById(promotionId).orElse(null);
+        if (promotion == null) {
+            return null;
         }
-        if (input.getDiscountValue() == null || input.getDiscountValue() <= 0) {
-            throw new RuntimeException("discountValue debe ser > 0");
+        
+        // Actualizar campos
+        if (promotionName != null) promotion.setPromotionName(promotionName);
+        if (description != null) promotion.setDescription(description);
+        if (startDate != null) promotion.setStartDate(startDate);
+        if (endDate != null) promotion.setEndDate(endDate);
+        if (discountValue != null) promotion.setDiscountValue(discountValue);
+        
+        // Actualizar entidades relacionadas
+        if (statusId != null) {
+            Status status = statusRepository.findById(statusId).orElse(null);
+            promotion.setStatus(status);
         }
-        if (input.getCategoryId() == null) {
-            throw new RuntimeException("categoryId es requerido");
+        
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            promotion.setUser(user);
         }
+        
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId).orElse(null);
+            promotion.setCategory(category);
+        }
+        
+        return promotionRepository.save(promotion);
+    }
 
-        LocalDate start = LocalDate.parse(input.getStartDate());
-        LocalDate end   = LocalDate.parse(input.getEndDate());
-        if (end.isBefore(start)) {
-            throw new RuntimeException("endDate no puede ser anterior a startDate");
+
+    
+    /**
+     * Obtiene promociones en la papelera temporal
+     */
+    public List<PromotionDeletedDTO> getDeletedPromotions() {
+        ZonedDateTime thirtyDaysAgo = ZonedDateTime.now().minusDays(30);
+        List<PromotionDeleted> deletedPromotions = promotionDeletedRepository.findRestorable(thirtyDaysAgo);
+        
+        return deletedPromotions.stream()
+                .map(this::convertDeletedToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtiene promociones eliminadas por un usuario específico
+     */
+    public List<PromotionDeletedDTO> getDeletedPromotionsByUser(Integer userId) {
+        List<PromotionDeleted> deletedPromotions = promotionDeletedRepository.findByDeletedByUserId(userId);
+        
+        return deletedPromotions.stream()
+                .map(this::convertDeletedToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Restaura una promoción de la papelera temporal
+     */
+    @Transactional
+    public boolean restorePromotion(Integer promotionId, Integer userId) {
+        try {
+            Optional<PromotionDeleted> deletedPromotionOpt = promotionDeletedRepository.findById(promotionId);
+            if (!deletedPromotionOpt.isPresent()) {
+                return false;
+            }
+            
+            PromotionDeleted deletedPromotion = deletedPromotionOpt.get();
+            
+            // Verificar que no han pasado 30 días
+            ZonedDateTime thirtyDaysAgo = ZonedDateTime.now().minusDays(30);
+            if (deletedPromotion.getDeletedAt().isBefore(thirtyDaysAgo)) {
+                return false;
+            }
+            
+            // Crear nueva promoción basada en los datos eliminados
+            Promotion restoredPromotion = new Promotion();
+            restoredPromotion.setPromotionName(deletedPromotion.getPromotionName());
+            restoredPromotion.setDescription(deletedPromotion.getDescription());
+            restoredPromotion.setStartDate(deletedPromotion.getStartDate());
+            restoredPromotion.setEndDate(deletedPromotion.getEndDate());
+            restoredPromotion.setDiscountValue(deletedPromotion.getDiscountValue());
+            restoredPromotion.setStatus(deletedPromotion.getStatus());
+            restoredPromotion.setUser(deletedPromotion.getUser());
+            restoredPromotion.setCategory(deletedPromotion.getCategory());
+            
+            // Guardar promoción restaurada
+            promotionRepository.save(restoredPromotion);
+            
+            // Eliminar de papelera
+            promotionDeletedRepository.delete(deletedPromotion);
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error restoring promotion: " + e.getMessage());
+            return false;
         }
-
-        // 3) Entidades relacionadas
-        Category category = categoryRepository.findById(input.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-
-        // 4) Status (solo se permiten ACTIVE, EXPIRED, SCHEDULED)
-        String statusKey;
-        if (input.getStatusName() != null && !input.getStatusName().isBlank()) {
-            statusKey = input.getStatusName().toUpperCase(Locale.ROOT);
-        } else {
-            // Si no viene, lo inferimos por fechas
-            LocalDate today = LocalDate.now();
-            if (end.isBefore(today)) statusKey = "EXPIRED";
-            else if (start.isAfter(today)) statusKey = "SCHEDULED";
-            else statusKey = "ACTIVE";
+    }
+    
+    /**
+     * Restaura una promoción usando la función de base de datos
+     */
+    @Transactional
+    public boolean restorePromotionUsingDBFunction(Integer promotionId, Integer userId) {
+        try {
+            // 1. Establecer el actor para la función de BD
+            if (userId != null) {
+                promotionRepository.setActor(userId);
+            }
+            
+            // 2. Llamar a la función de BD que hace todo automáticamente
+            promotionRepository.restorePromotionUsingFunction(promotionId);
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error restoring promotion using DB function: " + e.getMessage());
+            return false;
         }
-        if (!statusKey.equals("ACTIVE") && !statusKey.equals("EXPIRED") && !statusKey.equals("SCHEDULED")) {
-            throw new RuntimeException("statusName inválido");
+    }
+    
+    /**
+     * Convierte PromotionDeleted a DTO
+     */
+    private PromotionDeletedDTO convertDeletedToDTO(PromotionDeleted deletedPromotion) {
+        return new PromotionDeletedDTO(
+                deletedPromotion.getPromotionId(),
+                deletedPromotion.getPromotionName(),
+                deletedPromotion.getDescription(),
+                deletedPromotion.getStartDate(),
+                deletedPromotion.getEndDate(),
+                deletedPromotion.getDiscountValue(),
+                deletedPromotion.getStatus(), // Objeto completo
+                deletedPromotion.getUser(), // Objeto completo
+                deletedPromotion.getCategory(), // Objeto completo
+                deletedPromotion.getDeletedAt(),
+                deletedPromotion.getDeletedBy() // Objeto completo
+        );
+    }
+    
+    /**
+     * Elimina una promoción guardándola primero en papelera temporal
+     */
+    @Transactional
+    public boolean deletePromotion(Integer promotionId) {
+        return deletePromotion(promotionId, null);
+    }
+    
+    /**
+     * Elimina una promoción usando los triggers de la base de datos
+     * Los triggers se encargan de:
+     * 1. Desvincular productos (trg_promotions_soft_delete)
+     * 2. Mover a promotions_deleted (trg_promotions_soft_delete)
+     * 3. Registrar auditoría (trg_promotions_audit)
+     * 
+     * @param promotionId ID de la promoción a eliminar
+     * @param deletedByUserId ID del usuario que elimina (opcional)
+     */
+    @Transactional
+    public boolean deletePromotion(Integer promotionId, Integer deletedByUserId) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                return false;
+            }
+            
+            // 1. Establecer el actor (usuario que elimina) para los triggers de BD
+            if (deletedByUserId != null) {
+                // Usar función de BD para establecer el contexto del usuario
+                promotionRepository.setActor(deletedByUserId);
+            }
+            
+            // 2. ELIMINAR la promoción - Los triggers se encargan de TODO automáticamente:
+            //    - trg_promotions_soft_delete: Desvincula productos, mueve a promotions_deleted
+            //    - trg_promotions_audit: Registra la auditoría
+            //    - trg_promotions_deleted_guard: Impide duplicados en promotions_deleted
+            Promotion promotion = promotionOpt.get();
+            promotionRepository.delete(promotion);
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error deleting promotion: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-        Status status = statusRepository.findByStatusName(statusKey)
-                .orElseThrow(() -> new RuntimeException("Status no existe: " + statusKey));
-
-        // 5) Construir y persistir
-        Promotion p = new Promotion();
-        p.setPromotionName(input.getPromotionName());
-        p.setDescription(input.getDescription());
-        p.setStartDate(start);
-        p.setEndDate(end);
-        p.setDiscountValue(input.getDiscountValue());
-        p.setStatus(status);
-        p.setCategory(category);
-        p.setUser(current);
-
-        return promotionRepository.save(p);
     }
 }

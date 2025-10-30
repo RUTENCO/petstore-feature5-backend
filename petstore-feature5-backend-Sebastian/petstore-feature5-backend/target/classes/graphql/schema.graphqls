@@ -1,4 +1,4 @@
-# Pet Store GraphQL Schema - Basado en esquema Supabase
+# Pet Store GraphQL Schema - Basado en esquema Neon
 
 type Query {
     # Health check
@@ -10,8 +10,15 @@ type Query {
     # Queries de promociones
     promotions: [Promotion!]!
     promotionsActive: [Promotion!]!
+    promotionsExpired: [Promotion!]!
+    promotionsScheduled: [Promotion!]!
+    promotionsByStatus(statusName: String!): [Promotion!]!
     promotionsByCategory(categoryId: ID!): [Promotion!]!
     promotion(id: ID!): Promotion
+    
+    # Queries de papelera temporal
+    deletedPromotions: [PromotionDeleted!]!
+    deletedPromotionsByUser(userId: ID!): [PromotionDeleted!]!
     
     # Queries de categorías
     categories: [Category!]!
@@ -25,12 +32,15 @@ type Query {
 
 type Mutation {
     # Mutaciones de autenticación
-    login(email: String!, password: String!): LoginResponse!
+    login(email: String!, password: String!): GraphQLLoginResponse!
     
     # Mutaciones de promociones (solo admin)
-    createPromotion(input: CreatePromotionInput!): Promotion!
+    createPromotion(input: PromotionInput!): Promotion!
     updatePromotion(id: ID!, input: PromotionInput!): Promotion!
-    deletePromotion(id: ID!): Boolean!
+    deletePromotion(id: ID!, userId: ID): Boolean!
+    
+    # Mutaciones de papelera temporal
+    restorePromotion(id: ID!, userId: ID!): Boolean!
 }
 
 type Product {
@@ -80,9 +90,24 @@ type Role {
     roleName: String!
 }
 
-type LoginResponse {
+type PromotionDeleted {
+    promotionId: ID!
+    promotionName: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    discountValue: Float!
+    status: Status!
+    user: User
+    category: Category
+    deletedAt: String!
+    deletedBy: User
+    daysUntilPurge: Int!
+}
+
+type GraphQLLoginResponse {
     token: String!
-    user: User!
+    user: User
     success: Boolean!
 }
 
@@ -93,15 +118,6 @@ input PromotionInput {
     endDate: String!
     discountValue: Float!
     statusId: ID!
+    userId: ID
     categoryId: ID
-}
-
-input CreatePromotionInput {
-  promotionName: String!
-  description: String
-  startDate: String!
-  endDate: String!
-  discountValue: Float!
-  statusName: String  
-  categoryId: Int!
 }

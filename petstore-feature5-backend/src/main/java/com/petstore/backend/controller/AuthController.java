@@ -19,7 +19,7 @@ import com.petstore.backend.service.AuthService;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500", "http://localhost:8081"})
 public class AuthController {
 
     // Constantes para keys de respuesta (para cumplir con SonarQube)

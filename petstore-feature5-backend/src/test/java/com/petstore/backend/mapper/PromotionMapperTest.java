@@ -1,13 +1,14 @@
 package com.petstore.backend.mapper;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,8 +49,8 @@ class PromotionMapperTest {
         testPromotionDTO.setPromotionName("Winter Sale");
         testPromotionDTO.setDescription("Amazing winter deals");
         testPromotionDTO.setDiscountPercentage(BigDecimal.valueOf(30.0));
-        testPromotionDTO.setStartDate(LocalDateTime.of(2024, 12, 1, 0, 0));
-        testPromotionDTO.setEndDate(LocalDateTime.of(2024, 12, 31, 0, 0));
+        testPromotionDTO.setStartDate(LocalDate.of(2024, 12, 1));
+        testPromotionDTO.setEndDate(LocalDate.of(2024, 12, 31));
     }
 
     @Test
@@ -63,8 +64,8 @@ class PromotionMapperTest {
         assertEquals(testPromotion.getDescription(), result.getDescription());
         assertEquals(BigDecimal.valueOf(testPromotion.getDiscountValue()), result.getDiscountPercentage());
         assertEquals(testPromotion.getStatus().getStatusName(), result.getStatus());
-        assertEquals(testPromotion.getStartDate().atStartOfDay(), result.getStartDate());
-        assertEquals(testPromotion.getEndDate().atStartOfDay(), result.getEndDate());
+        assertEquals(testPromotion.getStartDate(), result.getStartDate());
+        assertEquals(testPromotion.getEndDate(), result.getEndDate());
     }
 
     @Test
@@ -115,8 +116,8 @@ class PromotionMapperTest {
         assertEquals(testPromotionDTO.getPromotionName(), result.getPromotionName());
         assertEquals(testPromotionDTO.getDescription(), result.getDescription());
         assertEquals(testPromotionDTO.getDiscountPercentage().doubleValue(), result.getDiscountValue());
-        assertEquals(testPromotionDTO.getStartDate().toLocalDate(), result.getStartDate());
-        assertEquals(testPromotionDTO.getEndDate().toLocalDate(), result.getEndDate());
+        assertEquals(testPromotionDTO.getStartDate(), result.getStartDate());
+        assertEquals(testPromotionDTO.getEndDate(), result.getEndDate());
         // promotionId should be ignored in mapping
         assertNull(result.getPromotionId());
     }
@@ -208,8 +209,8 @@ class PromotionMapperTest {
         assertEquals(testPromotionDTO.getPromotionName(), existingPromotion.getPromotionName());
         assertEquals(testPromotionDTO.getDescription(), existingPromotion.getDescription());
         assertEquals(testPromotionDTO.getDiscountPercentage().doubleValue(), existingPromotion.getDiscountValue());
-        assertEquals(testPromotionDTO.getStartDate().toLocalDate(), existingPromotion.getStartDate());
-        assertEquals(testPromotionDTO.getEndDate().toLocalDate(), existingPromotion.getEndDate());
+        assertEquals(testPromotionDTO.getStartDate(), existingPromotion.getStartDate());
+        assertEquals(testPromotionDTO.getEndDate(), existingPromotion.getEndDate());
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.petstore.backend.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,20 +14,19 @@ import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.UserRepository;
 import com.petstore.backend.util.JwtUtil;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Service
 public class AuthService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private JwtUtil jwtUtil;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository; // Inyección de dependencia del repositorio de usuarios
+    private final JwtUtil jwtUtil; // Inyección de dependencia de la utilidad JWT
+    // private final PasswordEncoder passwordEncoder; // Inyección de dependencia del codificador de contraseñas
+
+    public AuthService(UserRepository userRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
+        // this.passwordEncoder = passwordEncoder;
+    }
+
 
     /**
      * Autenticar específicamente un Marketing Admin

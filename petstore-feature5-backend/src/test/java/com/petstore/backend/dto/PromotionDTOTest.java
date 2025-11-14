@@ -1,10 +1,13 @@
 package com.petstore.backend.dto;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -90,7 +93,7 @@ class PromotionDTOTest {
     @Test
     void setStartDate_ShouldSetStartDate() {
         // Given
-        LocalDateTime startDate = LocalDateTime.of(2025, 6, 1, 0, 0, 0);
+        LocalDate startDate = LocalDate.of(2025, 6, 1);
 
         // When
         promotionDTO.setStartDate(startDate);
@@ -102,7 +105,7 @@ class PromotionDTOTest {
     @Test
     void setEndDate_ShouldSetEndDate() {
         // Given
-        LocalDateTime endDate = LocalDateTime.of(2025, 8, 31, 23, 59, 59);
+        LocalDate endDate = LocalDate.of(2025, 8, 31);
 
         // When
         promotionDTO.setEndDate(endDate);
@@ -177,8 +180,8 @@ class PromotionDTOTest {
         String promotionName = "Black Friday";
         String description = "Biggest sale of the year";
         BigDecimal discountPercentage = BigDecimal.valueOf(50.0);
-        LocalDateTime startDate = LocalDateTime.of(2025, 11, 25, 0, 0, 0);
-        LocalDateTime endDate = LocalDateTime.of(2025, 11, 30, 23, 59, 59);
+        LocalDate startDate = LocalDate.of(2025, 11, 25);
+        LocalDate endDate = LocalDate.of(2025, 11, 30);
         String status = "ACTIVE";
         LocalDateTime createdAt = LocalDateTime.now();
         LocalDateTime updatedAt = LocalDateTime.now();

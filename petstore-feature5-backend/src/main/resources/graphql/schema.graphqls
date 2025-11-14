@@ -39,8 +39,13 @@ type Mutation {
     updatePromotion(id: ID!, input: PromotionInput!): Promotion!
     deletePromotion(id: ID!, userId: ID): Boolean!
     
+    # Mutaciones de asociación producto-promoción
+    associateProductsToPromotion(promotionId: ID!, productIds: [ID!]!): Promotion!
+    removeProductsFromPromotion(promotionId: ID!, productIds: [ID!]!): Promotion!
+    
     # Mutaciones de papelera temporal
     restorePromotion(id: ID!, userId: ID!): Boolean!
+    permanentDeletePromotion(id: ID!, userId: ID!): Boolean!
 }
 
 type Product {
@@ -66,7 +71,7 @@ type Promotion {
     description: String
     startDate: String!
     endDate: String!
-    discountValue: Float!
+    discountPercentage: Float!
     status: Status!
     user: User
     category: Category
@@ -96,7 +101,7 @@ type PromotionDeleted {
     description: String
     startDate: String!
     endDate: String!
-    discountValue: Float!
+    discountPercentage: Float!
     status: Status!
     user: User
     category: Category
@@ -116,7 +121,7 @@ input PromotionInput {
     description: String
     startDate: String!
     endDate: String!
-    discountValue: Float!
+    discountPercentage: Float!
     statusId: ID!
     userId: ID
     categoryId: ID

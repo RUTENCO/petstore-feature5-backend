@@ -1,12 +1,23 @@
 package com.petstore.backend.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * DTO de respuesta para User - No expone información sensible como password
  */
+@Schema(description = "DTO de respuesta para información de usuario (sin datos sensibles)")
 public class UserResponseDTO {
+    
+    @Schema(description = "ID único del usuario", example = "1")
     private Integer userId;
+    
+    @Schema(description = "Nombre de usuario", example = "juan_perez")
     private String userName;
+    
+    @Schema(description = "Email del usuario", example = "juan@example.com")
     private String email;
+    
+    @Schema(description = "Rol del usuario", example = "ADMIN")
     private String roleName;
 
     // Constructors

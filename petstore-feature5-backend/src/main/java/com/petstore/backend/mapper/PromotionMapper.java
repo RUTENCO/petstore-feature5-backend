@@ -1,11 +1,12 @@
 package com.petstore.backend.mapper;
 
-import com.petstore.backend.dto.PromotionDTO;
-import com.petstore.backend.entity.Promotion;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.factory.Mappers;
+
+import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.entity.Promotion;
 
 /**
  * Mapper para transformaciones Promotion <-> PromotionDTO
@@ -20,8 +21,11 @@ public interface PromotionMapper {
      */
     @Mapping(target = "discountPercentage", expression = "java(java.math.BigDecimal.valueOf(promotion.getDiscountValue()))")
     @Mapping(target = "status", expression = "java(promotion.getStatus() != null ? promotion.getStatus().getStatusName() : null)")
-    @Mapping(target = "startDate", expression = "java(promotion.getStartDate() != null ? promotion.getStartDate().atStartOfDay() : null)")
-    @Mapping(target = "endDate", expression = "java(promotion.getEndDate() != null ? promotion.getEndDate().atStartOfDay() : null)")
+    @Mapping(target = "startDate", source = "startDate")
+    @Mapping(target = "endDate", source = "endDate")
+    @Mapping(target = "categoryId", expression = "java(promotion.getCategory() != null ? promotion.getCategory().getCategoryId() : null)")
+    @Mapping(target = "statusId", expression = "java(promotion.getStatus() != null ? promotion.getStatus().getStatusId() : null)")
+    @Mapping(target = "userId", expression = "java(promotion.getUser() != null ? promotion.getUser().getUserId() : null)")
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -32,10 +36,11 @@ public interface PromotionMapper {
      */
     @Mapping(target = "promotionId", ignore = true)
     @Mapping(target = "discountValue", expression = "java(promotionDTO.getDiscountPercentage() != null ? promotionDTO.getDiscountPercentage().doubleValue() : null)")
-    @Mapping(target = "startDate", expression = "java(promotionDTO.getStartDate() != null ? promotionDTO.getStartDate().toLocalDate() : null)")
-    @Mapping(target = "endDate", expression = "java(promotionDTO.getEndDate() != null ? promotionDTO.getEndDate().toLocalDate() : null)")
+    @Mapping(target = "startDate", source = "startDate")
+    @Mapping(target = "endDate", source = "endDate")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "category", ignore = true)
     Promotion toEntity(PromotionDTO promotionDTO);
 
     /**
@@ -48,9 +53,10 @@ public interface PromotionMapper {
      */
     @Mapping(target = "promotionId", ignore = true)
     @Mapping(target = "discountValue", expression = "java(promotionDTO.getDiscountPercentage() != null ? promotionDTO.getDiscountPercentage().doubleValue() : null)")
-    @Mapping(target = "startDate", expression = "java(promotionDTO.getStartDate() != null ? promotionDTO.getStartDate().toLocalDate() : null)")
-    @Mapping(target = "endDate", expression = "java(promotionDTO.getEndDate() != null ? promotionDTO.getEndDate().toLocalDate() : null)")
+    @Mapping(target = "startDate", source = "startDate")
+    @Mapping(target = "endDate", source = "endDate")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "user", ignore = true)
+    @Mapping(target = "category", ignore = true)
     void updateEntityFromDTO(PromotionDTO promotionDTO, @MappingTarget Promotion promotion);
 }

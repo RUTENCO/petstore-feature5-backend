@@ -1,8 +1,17 @@
 package com.petstore.backend.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "DTO para representar una categoría de productos")
 public class CategoryDTO {
+    
+    @Schema(description = "ID único de la categoría", example = "1")
     private Integer categoryId;
+    
+    @Schema(description = "Nombre de la categoría", example = "Accesorios para perros")
     private String categoryName;
+    
+    @Schema(description = "Descripción de la categoría", example = "Accesorios y complementos para perros de todas las razas")
     private String description;
 
     // Constructors

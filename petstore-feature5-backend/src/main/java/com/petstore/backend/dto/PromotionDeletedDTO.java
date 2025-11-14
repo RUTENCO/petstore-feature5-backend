@@ -8,25 +8,53 @@ import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "DTO para promociones eliminadas (papelera temporal)")
 public class PromotionDeletedDTO {
     
+    @Schema(description = "ID único de la promoción", example = "1")
     private Integer promotionId;
+    
+    @Schema(description = "Nombre de la promoción", example = "Descuento Halloween")
     private String promotionName;
+    
+    @Schema(description = "Descripción detallada de la promoción", example = "20% de descuento en productos para mascotas")
     private String description;
+    
+    @Schema(description = "Fecha de inicio de la promoción", example = "2024-10-01")
     private LocalDate startDate;
+    
+    @Schema(description = "Fecha de fin de la promoción", example = "2024-10-31")
     private LocalDate endDate;
+    
+    @Schema(description = "Valor del descuento", example = "20.0")
     private Double discountValue;
+    
+    @Schema(description = "Nombre del estado de la promoción", example = "ACTIVE")
     private String statusName; // Para compatibilidad con REST
+    
     @JsonIgnore
     private Status status; // Para GraphQL
+    
+    @Schema(description = "Nombre del usuario que creó la promoción", example = "admin_user")
     private String userName; // Para compatibilidad con REST
+    
     @JsonIgnore
     private User user; // Para GraphQL
+    
+    @Schema(description = "Nombre de la categoría", example = "Accesorios")
     private String categoryName; // Para compatibilidad con REST
+    
     @JsonIgnore
     private Category category; // Para GraphQL
+    
+    @Schema(description = "Fecha y hora de eliminación")
     private ZonedDateTime deletedAt;
+    
+    @Schema(description = "Nombre del usuario que eliminó la promoción", example = "admin_user")
     private String deletedByUserName; // Para compatibilidad con REST
+    
     @JsonIgnore
     private User deletedBy; // Para GraphQL
     private Integer daysUntilPurge;

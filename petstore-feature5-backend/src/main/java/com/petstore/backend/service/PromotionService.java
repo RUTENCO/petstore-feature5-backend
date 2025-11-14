@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
@@ -28,20 +30,28 @@ import com.petstore.backend.repository.UserRepository;
 @Service
 public class PromotionService {
 
-    @Autowired
-    private PromotionRepository promotionRepository;
-    
-    @Autowired
-    private StatusRepository statusRepository;
-    
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private CategoryRepository categoryRepository;
-    
-    @Autowired
-    private PromotionDeletedRepository promotionDeletedRepository;
+    private static final Logger logger = LoggerFactory.getLogger(PromotionService.class);
+
+    private final PromotionRepository promotionRepository; // Inyección de dependencia del repositorio de promociones
+    private final StatusRepository statusRepository; // Inyección de dependencia del repositorio de estados
+    private final UserRepository userRepository; // Inyección de dependencia del repositorio de usuarios
+    private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
+    private final PromotionDeletedRepository promotionDeletedRepository; // Inyección de dependencia del repositorio de promociones eliminadas
+    private final ProductRepository productRepository; // Inyección de dependencia del repositorio de productos
+
+    public PromotionService(PromotionRepository promotionRepository,
+                            StatusRepository statusRepository,
+                            UserRepository userRepository,
+                            CategoryRepository categoryRepository,
+                            PromotionDeletedRepository promotionDeletedRepository,
+                            ProductRepository productRepository) {
+        this.promotionRepository = promotionRepository;
+        this.statusRepository = statusRepository;
+        this.userRepository = userRepository;
+        this.categoryRepository = categoryRepository;
+        this.promotionDeletedRepository = promotionDeletedRepository;
+        this.productRepository = productRepository;
+    }
 
     /**
      * Obtiene todas las promociones activas y vigentes
@@ -108,12 +118,12 @@ public class PromotionService {
             dto.setDiscountPercentage(BigDecimal.valueOf(promotion.getDiscountValue()));
         }
         
-        // Convertir LocalDate a LocalDateTime (agregando hora 00:00:00)
+        // Asignar fechas directamente (LocalDate a LocalDate)
         if (promotion.getStartDate() != null) {
-            dto.setStartDate(promotion.getStartDate().atStartOfDay());
+            dto.setStartDate(promotion.getStartDate());
         }
         if (promotion.getEndDate() != null) {
-            dto.setEndDate(promotion.getEndDate().atTime(23, 59, 59));
+            dto.setEndDate(promotion.getEndDate());
         }
         
         // Nota: Las entidades Promotion no tienen createdAt/updatedAt en el esquema actual
@@ -329,7 +339,7 @@ public class PromotionService {
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error restoring promotion: " + e.getMessage());
+            logger.error("Error restoring promotion with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -345,13 +355,13 @@ public class PromotionService {
                 promotionRepository.setActor(userId);
             }
             
-            // 2. Llamar a la función de BD que hace todo automáticamente
+            // 2. Llamar a la función de BD que hace automáticamente el proceso de restauración
             promotionRepository.restorePromotionUsingFunction(promotionId);
             
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error restoring promotion using DB function: " + e.getMessage());
+            logger.error("Error restoring promotion using DB function with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -408,7 +418,7 @@ public class PromotionService {
                 promotionRepository.setActor(deletedByUserId);
             }
             
-            // 2. ELIMINAR la promoción - Los triggers se encargan de TODO automáticamente:
+            // 2. eliminar la promoción - Los triggers se encargan del proceso
             //    - trg_promotions_soft_delete: Desvincula productos, mueve a promotions_deleted
             //    - trg_promotions_audit: Registra la auditoría
             //    - trg_promotions_deleted_guard: Impide duplicados en promotions_deleted
@@ -418,8 +428,110 @@ public class PromotionService {
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error deleting promotion: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error deleting promotion with ID {}: {}", promotionId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Elimina permanentemente una promoción de la papelera temporal
+     * @param promotionId ID de la promoción a eliminar permanentemente
+     * @param userId ID del usuario que realiza la acción
+     * @return true si se eliminó correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean permanentDeletePromotion(Integer promotionId, Integer userId) {
+        try {
+            // Buscar la promoción en la papelera
+            Optional<PromotionDeleted> promotionDeleted = promotionDeletedRepository.findById(promotionId);
+            
+            if (promotionDeleted.isPresent()) {
+                // Eliminar permanentemente de la papelera
+                promotionDeletedRepository.delete(promotionDeleted.get());
+                
+                logger.info("Promotion with ID {} permanently deleted by user {}", promotionId, userId);
+                return true;
+            } else {
+                logger.warn("Promotion with ID {} not found in trash", promotionId);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error permanently deleting promotion with ID {}: {}", promotionId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Asocia productos a una promoción
+     * @param promotionId ID de la promoción
+     * @param productIds Lista de IDs de productos a asociar
+     * @return true si se asociaron correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean associateProductsToPromotion(Integer promotionId, List<Integer> productIds) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                logger.warn("Promotion with ID {} not found for product association", promotionId);
+                return false;
+            }
+
+            Promotion promotion = promotionOpt.get();
+            
+            // Asociar productos a la promoción
+            for (Integer productId : productIds) {
+                productRepository.findById(productId).ifPresent(product -> {
+                    product.setPromotion(promotion);
+                    productRepository.save(product);
+                });
+            }
+            
+            logger.info("Successfully associated products {} to promotion {}", productIds, promotionId);
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("Error associating products {} to promotion {}: {}", productIds, promotionId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Remueve productos de una promoción.
+     * 
+     * @param promotionId ID de la promoción
+     * @param productIds Lista de IDs de productos a remover
+     * @return true si se removieron correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean removeProductsFromPromotion(Integer promotionId, List<Integer> productIds) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                logger.warn("Promotion with ID {} not found for product removal", promotionId);
+                return false;
+            }
+            
+            // Remover productos de la promoción
+            for (Integer productId : productIds) {
+                productRepository.findById(productId).ifPresent(product -> {
+                    if (product.getPromotion() != null 
+                        && product.getPromotion().getPromotionId().equals(promotionId)) {
+                        product.setPromotion(null);
+                        productRepository.save(product);
+                    }
+                });
+            }
+            
+            logger.info("Successfully removed products {} from promotion {}", 
+                       productIds, promotionId);
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("Error removing products {} from promotion {}: {}", 
+                        productIds, promotionId, e.getMessage(), e);
             return false;
         }
     }

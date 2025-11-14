@@ -1,18 +1,23 @@
 package com.petstore.backend.service;
 
-import com.petstore.backend.entity.Category;
-import com.petstore.backend.repository.CategoryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
+import com.petstore.backend.entity.Category;
+import com.petstore.backend.repository.CategoryRepository;
 
 @Service
 public class CategoryService {
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    
+    private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
+
+    public CategoryService(CategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
+    }
+
 
     /**
      * Encuentra todas las categorías

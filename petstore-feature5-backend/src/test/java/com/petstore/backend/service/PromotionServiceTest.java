@@ -1,9 +1,5 @@
 package com.petstore.backend.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -11,21 +7,35 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionDeletedDTO;
 import com.petstore.backend.entity.Category;
+import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
 import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
@@ -48,6 +58,9 @@ class PromotionServiceTest {
     
     @Mock
     private PromotionDeletedRepository promotionDeletedRepository;
+    
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private PromotionService promotionService;
@@ -538,5 +551,182 @@ class PromotionServiceTest {
         assertFalse(result);
         verify(promotionRepository).findById(promotionId);
         verify(promotionRepository, never()).delete(any(Promotion.class));
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenValidData_ShouldReturnTrue() {
+        // Given
+        Integer promotionId = 1;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        Product product1 = new Product();
+        product1.setProductId(1);
+        Product product2 = new Product();
+        product2.setProductId(2);
+        
+        when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(testPromotion));
+        when(productRepository.findById(1)).thenReturn(Optional.of(product1));
+        when(productRepository.findById(2)).thenReturn(Optional.of(product2));
+        when(productRepository.save(any(Product.class))).thenReturn(product1);
+
+        // When
+        boolean result = promotionService.associateProductsToPromotion(promotionId, productIds);
+
+        // Then
+        assertTrue(result);
+        verify(promotionRepository).findById(promotionId);
+        verify(productRepository).findById(1);
+        verify(productRepository).findById(2);
+        verify(productRepository, times(2)).save(any(Product.class));
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenPromotionNotFound_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 999;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        when(promotionRepository.findById(promotionId)).thenReturn(Optional.empty());
+
+        // When
+        boolean result = promotionService.associateProductsToPromotion(promotionId, productIds);
+
+        // Then
+        assertFalse(result);
+        verify(promotionRepository).findById(promotionId);
+        verify(productRepository, never()).findById(anyInt());
+        verify(productRepository, never()).save(any(Product.class));
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenExceptionThrown_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 1;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        when(promotionRepository.findById(promotionId)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        boolean result = promotionService.associateProductsToPromotion(promotionId, productIds);
+
+        // Then
+        assertFalse(result);
+        verify(promotionRepository).findById(promotionId);
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenValidData_ShouldReturnTrue() {
+        // Given
+        Integer promotionId = 1;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        Product product1 = new Product();
+        product1.setProductId(1);
+        product1.setPromotion(testPromotion);
+        
+        Product product2 = new Product();
+        product2.setProductId(2);
+        product2.setPromotion(testPromotion);
+        
+        when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(testPromotion));
+        when(productRepository.findById(1)).thenReturn(Optional.of(product1));
+        when(productRepository.findById(2)).thenReturn(Optional.of(product2));
+        when(productRepository.save(any(Product.class))).thenReturn(product1);
+
+        // When
+        boolean result = promotionService.removeProductsFromPromotion(promotionId, productIds);
+
+        // Then
+        assertTrue(result);
+        verify(promotionRepository).findById(promotionId);
+        verify(productRepository).findById(1);
+        verify(productRepository).findById(2);
+        verify(productRepository, times(2)).save(any(Product.class));
+        assertNull(product1.getPromotion());
+        assertNull(product2.getPromotion());
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenPromotionNotFound_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 999;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        when(promotionRepository.findById(promotionId)).thenReturn(Optional.empty());
+
+        // When
+        boolean result = promotionService.removeProductsFromPromotion(promotionId, productIds);
+
+        // Then
+        assertFalse(result);
+        verify(promotionRepository).findById(promotionId);
+        verify(productRepository, never()).findById(anyInt());
+        verify(productRepository, never()).save(any(Product.class));
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenExceptionThrown_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 1;
+        List<Integer> productIds = Arrays.asList(1, 2);
+        
+        when(promotionRepository.findById(promotionId)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        boolean result = promotionService.removeProductsFromPromotion(promotionId, productIds);
+
+        // Then
+        assertFalse(result);
+        verify(promotionRepository).findById(promotionId);
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenPromotionExists_ShouldReturnTrue() {
+        // Given
+        Integer promotionId = 1;
+        Integer userId = 1;
+        
+        when(promotionDeletedRepository.findById(promotionId)).thenReturn(Optional.of(testPromotionDeleted));
+
+        // When
+        boolean result = promotionService.permanentDeletePromotion(promotionId, userId);
+
+        // Then
+        assertTrue(result);
+        verify(promotionDeletedRepository).findById(promotionId);
+        verify(promotionDeletedRepository).delete(testPromotionDeleted);
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenPromotionNotFound_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 999;
+        Integer userId = 1;
+        
+        when(promotionDeletedRepository.findById(promotionId)).thenReturn(Optional.empty());
+
+        // When
+        boolean result = promotionService.permanentDeletePromotion(promotionId, userId);
+
+        // Then
+        assertFalse(result);
+        verify(promotionDeletedRepository).findById(promotionId);
+        verify(promotionDeletedRepository, never()).delete(any(PromotionDeleted.class));
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenExceptionThrown_ShouldReturnFalse() {
+        // Given
+        Integer promotionId = 1;
+        Integer userId = 1;
+        
+        when(promotionDeletedRepository.findById(promotionId)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        boolean result = promotionService.permanentDeletePromotion(promotionId, userId);
+
+        // Then
+        assertFalse(result);
+        verify(promotionDeletedRepository).findById(promotionId);
     }
 }

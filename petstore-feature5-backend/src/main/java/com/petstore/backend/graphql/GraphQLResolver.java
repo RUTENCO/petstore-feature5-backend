@@ -488,6 +488,30 @@ public class GraphQLResolver {
         }
     }
 
+    @SchemaMapping(typeName = "Promotion", field = "discountPercentage")
+    public Double promotionDiscountPercentage(Promotion promotion) {
+        try {
+            // Mapear discountValue de la entidad a discountPercentage del esquema
+            Double discountValue = promotion.getDiscountValue();
+            return discountValue != null ? discountValue : 0.0;
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting discount percentage for promotion: {}" , e.getMessage(), e);
+            return 0.0;
+        }
+    }
+
+    @SchemaMapping(typeName = "PromotionDeleted", field = "discountPercentage")
+    public Double promotionDeletedDiscountPercentage(PromotionDeletedDTO promotionDeleted) {
+        try {
+            // Mapear discountValue del DTO a discountPercentage del esquema
+            Double discountValue = promotionDeleted.getDiscountValue();
+            return discountValue != null ? discountValue : 0.0;
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting discount percentage for deleted promotion: {}" , e.getMessage(), e);
+            return 0.0;
+        }
+    }
+
     @SchemaMapping(typeName = "Category", field = "promotions")
     public List<Promotion> categoryPromotions(Category category) {
         try {

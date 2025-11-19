@@ -30,7 +30,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Productos", description = "Gestión de productos de la tienda de mascotas")
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080", "https://petstore-feature5-backend.onrender.com", "https://fluffy-deals-hub.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080", "https://petstore-feature5-backend.onrender.com", "https://fluffy-deals-hub.vercel.app", "http://localhost:8081"})
 public class ProductController {
 
     private final ProductService productService; // Inyección de dependencia del servicio de productos

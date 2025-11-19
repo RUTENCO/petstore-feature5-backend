@@ -31,7 +31,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Métricas de Promociones", description = "API para obtener métricas de rendimiento de promociones")
 @RestController
 @RequestMapping("/api/promotions/metrics")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080", "https://petstore-feature5-backend.onrender.com", "https://fluffy-deals-hub.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080", "https://petstore-feature5-backend.onrender.com", "https://fluffy-deals-hub.vercel.app", "http://localhost:8081"})
 public class PromotionMetricsController {
 
     private final PromotionMetricsService promotionMetricsService;

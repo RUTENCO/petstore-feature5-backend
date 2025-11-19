@@ -1,27 +1,32 @@
 package com.petstore.backend.service;
 
-import com.petstore.backend.dto.LoginResponse;
-import com.petstore.backend.entity.Role;
-import com.petstore.backend.entity.User;
-import com.petstore.backend.repository.UserRepository;
-import com.petstore.backend.util.JwtUtil;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Map;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import com.petstore.backend.dto.LoginResponse;
+import com.petstore.backend.entity.Role;
+import com.petstore.backend.entity.User;
+import com.petstore.backend.repository.UserRepository;
+import com.petstore.backend.util.JwtUtil;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -51,7 +56,7 @@ class AuthServiceTest {
         mockUser.setUserId(1);
         mockUser.setUserName("Test User");
         mockUser.setEmail("test@example.com");
-        mockUser.setPassword("password123");
+        mockUser.setPassword("$2a$10$encodedPasswordHash"); // Contraseña cifrada simulada
         mockUser.setRole(mockRole);
     }
 
@@ -64,6 +69,7 @@ class AuthServiceTest {
 
         when(userRepository.findMarketingAdminByEmail(email))
                 .thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches(password, mockUser.getPassword())).thenReturn(true);
         when(jwtUtil.generateToken(email)).thenReturn(expectedToken);
 
         // When
@@ -109,6 +115,7 @@ class AuthServiceTest {
 
         when(userRepository.findMarketingAdminByEmail(email))
                 .thenReturn(Optional.of(mockUser));
+        when(passwordEncoder.matches(wrongPassword, mockUser.getPassword())).thenReturn(false);
 
         // When & Then
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
@@ -117,6 +124,7 @@ class AuthServiceTest {
 
         assertEquals("Contraseña incorrecta", exception.getMessage());
         verify(userRepository).findMarketingAdminByEmail(email);
+        verify(passwordEncoder).matches(wrongPassword, mockUser.getPassword());
         verify(jwtUtil, never()).generateToken(anyString());
     }
 
@@ -258,5 +266,105 @@ class AuthServiceTest {
         });
 
         verify(userRepository).findByEmail(username);
+    }
+
+    @Test
+    void encryptPassword_WithValidPassword_ShouldReturnEncryptedPassword() {
+        // Given
+        String rawPassword = "admin123";
+        String expectedEncrypted = "$2a$10$encrypted.password.hash";
+        
+        when(passwordEncoder.encode(rawPassword)).thenReturn(expectedEncrypted);
+
+        // When
+        String result = authService.encryptPassword(rawPassword);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(expectedEncrypted, result);
+        verify(passwordEncoder).encode(rawPassword);
+    }
+
+    @Test
+    void encryptPassword_WithEmptyPassword_ShouldReturnEncryptedEmpty() {
+        // Given
+        String rawPassword = "";
+        String expectedEncrypted = "$2a$10$empty.encrypted.hash";
+        
+        when(passwordEncoder.encode(rawPassword)).thenReturn(expectedEncrypted);
+
+        // When
+        String result = authService.encryptPassword(rawPassword);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(expectedEncrypted, result);
+        verify(passwordEncoder).encode(rawPassword);
+    }
+
+    @Test
+    void authenticateMarketingAdmin_WithEncryptedPassword_ShouldReturnLoginResponse() {
+        // Given
+        String email = "test@example.com";
+        String rawPassword = "admin123";
+        String encryptedPassword = "$2a$10$encrypted.password.hash";
+        String expectedToken = "jwt-token-456";
+
+        // Setup user with encrypted password
+        User userWithEncryptedPassword = new User();
+        userWithEncryptedPassword.setUserId(1);
+        userWithEncryptedPassword.setUserName("Test User");
+        userWithEncryptedPassword.setEmail("test@example.com");
+        userWithEncryptedPassword.setPassword(encryptedPassword);
+        userWithEncryptedPassword.setRole(mockRole);
+
+        when(userRepository.findMarketingAdminByEmail(email))
+                .thenReturn(Optional.of(userWithEncryptedPassword));
+        when(passwordEncoder.matches(rawPassword, encryptedPassword)).thenReturn(true);
+        when(jwtUtil.generateToken(email)).thenReturn(expectedToken);
+
+        // When
+        LoginResponse response = authService.authenticateMarketingAdmin(email, rawPassword);
+
+        // Then
+        assertNotNull(response);
+        assertTrue(response.isSuccess());
+        assertEquals(expectedToken, response.getToken());
+        assertEquals("Test User", response.getUserName());
+        assertEquals(email, response.getEmail());
+        assertEquals("MARKETING_ADMIN", response.getRole());
+        assertEquals("Login exitoso", response.getMessage());
+
+        verify(userRepository).findMarketingAdminByEmail(email);
+        verify(passwordEncoder).matches(rawPassword, encryptedPassword);
+        verify(jwtUtil).generateToken(email);
+    }
+
+    @Test
+    void authenticateMarketingAdmin_WithWrongEncryptedPassword_ShouldThrowException() {
+        // Given
+        String email = "test@example.com";
+        String rawPassword = "wrongpassword";
+        String encryptedPassword = "$2a$10$encrypted.password.hash";
+
+        User userWithEncryptedPassword = new User();
+        userWithEncryptedPassword.setUserId(1);
+        userWithEncryptedPassword.setUserName("Test User");
+        userWithEncryptedPassword.setEmail("test@example.com");
+        userWithEncryptedPassword.setPassword(encryptedPassword);
+        userWithEncryptedPassword.setRole(mockRole);
+
+        when(userRepository.findMarketingAdminByEmail(email))
+                .thenReturn(Optional.of(userWithEncryptedPassword));
+        when(passwordEncoder.matches(rawPassword, encryptedPassword)).thenReturn(false);
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            authService.authenticateMarketingAdmin(email, rawPassword);
+        });
+
+        assertEquals("Contraseña incorrecta", exception.getMessage());
+        verify(userRepository).findMarketingAdminByEmail(email);
+        verify(passwordEncoder).matches(rawPassword, encryptedPassword);
     }
 }

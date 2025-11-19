@@ -35,12 +35,16 @@ import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.UserRepository;
 import com.petstore.backend.service.AuthService;
+import com.petstore.backend.service.PromotionMetricsService;
 import com.petstore.backend.service.PromotionService;
 
 class GraphQLResolverTest {
 
     @Mock
     private PromotionService promotionService;
+
+    @Mock
+    private PromotionMetricsService promotionMetricsService;
 
     @Mock
     private AuthService authService;
@@ -74,6 +78,7 @@ class GraphQLResolverTest {
         MockitoAnnotations.openMocks(this);
         graphQLResolver = new GraphQLResolver(
                 promotionService,
+                promotionMetricsService,
                 authService,
                 userRepository,
                 categoryRepository,

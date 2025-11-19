@@ -19,12 +19,12 @@ public class AuthService implements UserDetailsService {
 
     private final UserRepository userRepository; // Inyección de dependencia del repositorio de usuarios
     private final JwtUtil jwtUtil; // Inyección de dependencia de la utilidad JWT
-    // private final PasswordEncoder passwordEncoder; // Inyección de dependencia del codificador de contraseñas
+    private final PasswordEncoder passwordEncoder; // Inyección de dependencia del codificador de contraseñas
 
     public AuthService(UserRepository userRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
-        // this.passwordEncoder = passwordEncoder;
+        this.passwordEncoder = passwordEncoder;
     }
 
 
@@ -37,14 +37,14 @@ public class AuthService implements UserDetailsService {
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado o no es Marketing Admin"));
 
         // Verificar contraseña (en producción usar passwordEncoder.matches)
-        /* if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Contraseña incorrecta");
-        } */
-
-        // Verificar contraseña para pruebas (sin encriptar)
-        if (!password.equals(user.getPassword())) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Contraseña incorrecta");
         }
+
+        /* // Verificar contraseña para pruebas (sin encriptar)
+        if (!password.equals(user.getPassword())) {
+            throw new RuntimeException("Contraseña incorrecta");
+        } */
 
         // Generar token JWT
         String token = jwtUtil.generateToken(user.getEmail());
@@ -114,6 +114,13 @@ public class AuthService implements UserDetailsService {
      */
     public boolean isMarketingAdmin(String email) {
         return userRepository.findMarketingAdminByEmail(email).isPresent();
+    }
+
+    /**
+     * Cifrar una contraseña (útil para generar contraseñas cifradas)
+     */
+    public String encryptPassword(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
     }
 
     /**

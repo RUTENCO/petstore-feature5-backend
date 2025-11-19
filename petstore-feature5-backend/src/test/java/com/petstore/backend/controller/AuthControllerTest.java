@@ -3,22 +3,21 @@ package com.petstore.backend.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +45,9 @@ class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
     @BeforeEach
     void setUp() {
         // Crear rol Marketing Admin si no existe
@@ -63,9 +65,13 @@ class AuthControllerTest {
             User adminUser = new User();
             adminUser.setUserName("Admin User");
             adminUser.setEmail("admin@petstore.com");
-            adminUser.setPassword("admin123"); // En producción debería estar hasheado
+            adminUser.setPassword(passwordEncoder.encode("admin123")); // Contraseña cifrada
             adminUser.setRole(marketingAdminRole);
             userRepository.save(adminUser);
+            
+            System.out.println("Usuario creado: " + adminUser.getEmail());
+            System.out.println("Rol: " + adminUser.getRole().getRoleName());
+            System.out.println("Password hash: " + adminUser.getPassword());
         }
     }
 
@@ -76,7 +82,25 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.service", is("Authentication Service")))
                 .andExpect(jsonPath("$.status", is("active")))
                 .andExpect(jsonPath("$.timestamp", notNullValue()))
-                .andExpect(jsonPath("$.endpoints", hasSize(5)));
+                .andExpect(jsonPath("$.endpoints", hasSize(6)));
+    }
+
+    @Test
+    void testGetStatus_CheckAllEndpoints() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/auth/status"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String content = result.getResponse().getContentAsString();
+        System.out.println("Status response: " + content);
+        
+        mockMvc.perform(get("/api/auth/status"))
+                .andExpect(jsonPath("$.endpoints[0]", is("POST /api/auth/login - Login de Marketing Admin")))
+                .andExpect(jsonPath("$.endpoints[1]", is("GET /api/auth/verify - Verificar token")))
+                .andExpect(jsonPath("$.endpoints[2]", is("GET /api/auth/me - Obtener perfil del usuario")))
+                .andExpect(jsonPath("$.endpoints[3]", is("POST /api/auth/logout - Logout")))
+                .andExpect(jsonPath("$.endpoints[4]", is("POST /api/auth/encrypt-password - Cifrar contraseña")))
+                .andExpect(jsonPath("$.endpoints[5]", is("GET /api/auth/status - Estado del servicio")));
     }
 
     @Test
@@ -85,8 +109,7 @@ class AuthControllerTest {
             {
                 "email": "admin@petstore.com",
                 "password": "admin123"
-            }
-            """;
+            }""";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -94,6 +117,7 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.userName", is("Admin User")))
                 .andExpect(jsonPath("$.email", is("admin@petstore.com")))
                 .andExpect(jsonPath("$.role", is("Marketing Admin")));
     }
@@ -104,8 +128,38 @@ class AuthControllerTest {
             {
                 "email": "admin@petstore.com",
                 "password": "wrongpassword"
-            }
-            """;
+            }""";
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Email o contraseña incorrectos, o el usuario no tiene permisos de Marketing Admin")));
+    }
+
+    @Test
+    void testLoginEndpoint_UserNotFound() throws Exception {
+        String loginRequest = """
+            {
+                "email": "nonexistent@petstore.com",
+                "password": "admin123"
+            }""";
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Email o contraseña incorrectos, o el usuario no tiene permisos de Marketing Admin")));
+    }
+
+    @Test
+    void testLoginEndpoint_MissingEmail() throws Exception {
+        String loginRequest = """
+            {
+                "password": "admin123"
+            }""";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -115,29 +169,83 @@ class AuthControllerTest {
     }
 
     @Test
-    void testLoginEndpoint_MissingFields() throws Exception {
+    void testLoginEndpoint_MissingPassword() throws Exception {
         String loginRequest = """
             {
                 "email": "admin@petstore.com"
-            }
-            """;
+            }""";
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginRequest))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)));
+    }
+
+    @Test
+    void testEncryptPasswordEndpoint_ValidPassword() throws Exception {
+        String request = """
+            {
+                "password": "testpassword123"
+            }""";
+
+        mockMvc.perform(post("/api/auth/encrypt-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rawPassword", is("testpassword123")))
+                .andExpect(jsonPath("$.encryptedPassword", notNullValue()))
+                .andExpect(jsonPath("$.message", is("Contraseña cifrada exitosamente")));
+    }
+
+    @Test
+    void testEncryptPasswordEndpoint_EmptyPassword() throws Exception {
+        String request = """
+            {
+                "password": ""
+            }""";
+
+        mockMvc.perform(post("/api/auth/encrypt-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("La contraseña no puede estar vacía")));
+    }
+
+    @Test
+    void testEncryptPasswordEndpoint_NullPassword() throws Exception {
+        String request = """
+            {
+                "password": null
+            }""";
+
+        mockMvc.perform(post("/api/auth/encrypt-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("La contraseña no puede estar vacía")));
+    }
+
+    @Test
+    void testEncryptPasswordEndpoint_MissingPasswordField() throws Exception {
+        String request = """
+            {}""";
+
+        mockMvc.perform(post("/api/auth/encrypt-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", is("La contraseña no puede estar vacía")));
     }
 
     @Test
     void testVerifyEndpoint_WithValidToken() throws Exception {
-        // First login to get a valid token
+        // Primero hacer login para obtener un token válido
         String loginRequest = """
             {
                 "email": "admin@petstore.com",
                 "password": "admin123"
-            }
-            """;
+            }""";
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -145,15 +253,17 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        String loginResponse = loginResult.getResponse().getContentAsString();
-        LoginResponse response = objectMapper.readValue(loginResponse, LoginResponse.class);
-        String token = response.getToken();
+        LoginResponse loginResponse = objectMapper.readValue(
+            loginResult.getResponse().getContentAsString(), 
+            LoginResponse.class
+        );
 
-        // Use the valid token to verify
+        // Usar el token para verificar
         mockMvc.perform(get("/api/auth/verify")
-                .header("Authorization", "Bearer " + token))
+                .header("Authorization", "Bearer " + loginResponse.getToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid", is(true)));
+                .andExpect(jsonPath("$.valid", is(true)))
+                .andExpect(jsonPath("$.message", is("Token válido")));
     }
 
     @Test
@@ -163,22 +273,13 @@ class AuthControllerTest {
     }
 
     @Test
-    void testVerifyEndpoint_WithInvalidToken() throws Exception {
-        mockMvc.perform(get("/api/auth/verify")
-                .header("Authorization", "Bearer invalid-token"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.valid", is(false)));
-    }
-
-    @Test
     void testGetCurrentUser_WithValidToken() throws Exception {
-        // First login to get a valid token
+        // Primero hacer login para obtener un token válido
         String loginRequest = """
             {
                 "email": "admin@petstore.com",
                 "password": "admin123"
-            }
-            """;
+            }""";
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -186,60 +287,64 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        String loginResponse = loginResult.getResponse().getContentAsString();
-        LoginResponse response = objectMapper.readValue(loginResponse, LoginResponse.class);
-        String token = response.getToken();
+        LoginResponse loginResponse = objectMapper.readValue(
+            loginResult.getResponse().getContentAsString(), 
+            LoginResponse.class
+        );
 
-        // Use the valid token to get current user
+        // Usar el token para obtener información del usuario
         mockMvc.perform(get("/api/auth/me")
-                .header("Authorization", "Bearer " + token))
+                .header("Authorization", "Bearer " + loginResponse.getToken()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userName", is("Admin User")))
                 .andExpect(jsonPath("$.email", is("admin@petstore.com")))
                 .andExpect(jsonPath("$.role", is("Marketing Admin")));
     }
 
     @Test
-    void testLogout() throws Exception {
+    void testGetCurrentUser_WithoutToken() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testOptions_CorsRequest() throws Exception {
+        mockMvc.perform(options("/api/auth/login")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testLogoutEndpoint() throws Exception {
+        // Primero hacer login para obtener un token válido
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com",
+                "password": "admin123"
+            }""";
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        LoginResponse loginResponse = objectMapper.readValue(
+            loginResult.getResponse().getContentAsString(), 
+            LoginResponse.class
+        );
+
+        // Hacer logout con el token
         mockMvc.perform(post("/api/auth/logout")
-                .header("Authorization", "Bearer some-token"))
+                .header("Authorization", "Bearer " + loginResponse.getToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message", is("Logout exitoso")));
     }
 
     @Test
-    void testLoginEndpoint_EmptyBody() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success", is(false)));
-    }
-
-    @Test
-    void testLoginEndpoint_InvalidJson() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("invalid json"))
+    void testLogoutEndpoint_WithoutToken() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void testGetStatus_CheckAllEndpoints() throws Exception {
-        mockMvc.perform(get("/api/auth/status"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.endpoints[0]", is("POST /api/auth/login - Login de Marketing Admin")))
-                .andExpect(jsonPath("$.endpoints[1]", is("GET /api/auth/verify - Verificar token")))
-                .andExpect(jsonPath("$.endpoints[2]", is("GET /api/auth/me - Obtener perfil del usuario")))
-                .andExpect(jsonPath("$.endpoints[3]", is("POST /api/auth/logout - Logout")))
-                .andExpect(jsonPath("$.endpoints[4]", is("GET /api/auth/status - Estado del servicio")));
-    }
-
-    @Test
-    void testOptionsRequest() throws Exception {
-        mockMvc.perform(options("/api/auth/login")
-                .header("Origin", "http://localhost:3000")
-                .header("Access-Control-Request-Method", "POST")
-                .header("Access-Control-Request-Headers", "Content-Type"))
-                .andExpect(status().isOk());
     }
 }

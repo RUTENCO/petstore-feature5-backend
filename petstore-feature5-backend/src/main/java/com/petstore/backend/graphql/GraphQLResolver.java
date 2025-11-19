@@ -2,6 +2,7 @@ package com.petstore.backend.graphql;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +15,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 
 import com.petstore.backend.dto.LoginResponse;
+import com.petstore.backend.dto.ProductMetricsDTO;
 import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionDeletedDTO;
+import com.petstore.backend.dto.PromotionPerformanceDTO;
 import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
@@ -26,12 +29,14 @@ import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.UserRepository;
 import com.petstore.backend.service.AuthService; // Importar Logger
+import com.petstore.backend.service.PromotionMetricsService;
 import com.petstore.backend.service.PromotionService; // Importar LoggerFactory
 
 @Controller
 public class GraphQLResolver {
 
     private final PromotionService promotionService;
+    private final PromotionMetricsService promotionMetricsService;
     private final AuthService authService;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
@@ -41,12 +46,14 @@ public class GraphQLResolver {
 
     public GraphQLResolver(
             PromotionService promotionService,
+            PromotionMetricsService promotionMetricsService,
             AuthService authService,
             UserRepository userRepository,
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
             PromotionRepository promotionRepository) {
         this.promotionService = promotionService;
+        this.promotionMetricsService = promotionMetricsService;
         this.authService = authService;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
@@ -240,6 +247,41 @@ public class GraphQLResolver {
             response.setSuccess(false);
             response.setMessage("Invalid credentials or authentication error");
             return response;
+        }
+    }
+
+    @MutationMapping
+    public Map<String, String> encryptPassword(@Argument String password) {
+        try {
+            loggerGraphQL.info("GraphQL Password encryption request");
+            
+            if (password == null || password.trim().isEmpty()) {
+                return Map.of(
+                    "success", "false",
+                    "rawPassword", "",
+                    "encryptedPassword", "",
+                    "message", "La contraseña no puede estar vacía"
+                );
+            }
+            
+            String encryptedPassword = authService.encryptPassword(password);
+            loggerGraphQL.info("GraphQL Password encrypted successfully");
+            
+            return Map.of(
+                "success", "true",
+                "rawPassword", password,
+                "encryptedPassword", encryptedPassword,
+                "message", "Contraseña cifrada exitosamente"
+            );
+            
+        } catch (Exception e) {
+            loggerGraphQL.error("Error in GraphQL password encryption: {}" , e.getMessage(), e);
+            return Map.of(
+                "success", "false",
+                "rawPassword", "",
+                "encryptedPassword", "",
+                "message", "Error al cifrar la contraseña"
+            );
         }
     }
 
@@ -529,6 +571,70 @@ public class GraphQLResolver {
         } catch (Exception e) {
             loggerGraphQL.error("Error getting products for category: {}" , e.getMessage(), e);
             return Collections.emptyList();
+        }
+    }
+
+    // === QUERIES DE MÉTRICAS DE PROMOCIONES ===
+
+    @QueryMapping
+    public PromotionPerformanceDTO promotionPerformance(@Argument String promotionId) {
+        try {
+            Integer id = Integer.valueOf(promotionId);
+            return promotionMetricsService.getPromotionPerformance(id).orElse(null);
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting promotion performance: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    @QueryMapping
+    public List<ProductMetricsDTO> promotionProductMetrics(@Argument String promotionId) {
+        try {
+            Integer id = Integer.valueOf(promotionId);
+            return promotionMetricsService.getProductMetricsByPromotionId(id);
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting product metrics: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
+    public Boolean promotionHasMetrics(@Argument String promotionId) {
+        try {
+            Integer id = Integer.valueOf(promotionId);
+            return promotionMetricsService.hasMetrics(id);
+        } catch (Exception e) {
+            loggerGraphQL.error("Error checking if promotion has metrics: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    // === MUTACIONES DE MÉTRICAS DE PROMOCIONES ===
+
+    @MutationMapping
+    public Boolean initializePromotionMetrics(@Argument String promotionId) {
+        try {
+            requireAuthentication();
+            Integer id = Integer.valueOf(promotionId);
+            promotionMetricsService.initializeMetricsForPromotion(id);
+            return true;
+        } catch (Exception e) {
+            loggerGraphQL.error("Error initializing promotion metrics: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @MutationMapping
+    public Boolean simulateMetricsUpdate(@Argument String promotionId, @Argument String productId, @Argument Integer unitsSold) {
+        try {
+            requireAuthentication();
+            Integer promId = Integer.valueOf(promotionId);
+            Integer prodId = Integer.valueOf(productId);
+            promotionMetricsService.simulateMetricsUpdate(promId, prodId, unitsSold);
+            return true;
+        } catch (Exception e) {
+            loggerGraphQL.error("Error simulating metrics update: {}", e.getMessage(), e);
+            return false;
         }
     }
 }

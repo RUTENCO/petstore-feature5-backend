@@ -69,6 +69,7 @@ public class AuthController {
                 "GET /api/auth/verify - Verificar token",
                 "GET /api/auth/me - Obtener perfil del usuario",
                 "POST /api/auth/logout - Logout",
+                "POST /api/auth/encrypt-password - Cifrar contraseña",
                 "GET /api/auth/status - Estado del servicio"
             )
         ));
@@ -213,8 +214,51 @@ public class AuthController {
             )
     })
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
+    public ResponseEntity<Map<String, String>> logout(@RequestHeader("Authorization") String token) {
         // En JWT stateless, el logout se maneja en el frontend eliminando el token
         return ResponseEntity.ok().body(Map.of(MESSAGE_KEY, "Logout exitoso"));
+    }
+
+    @Operation(
+            summary = "Cifrar contraseña",
+            description = "Endpoint para cifrar contraseñas usando BCrypt para generar hashes seguros. Útil para generar contraseñas cifradas que se puedan almacenar en la base de datos."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Contraseña cifrada exitosamente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"rawPassword\": \"admin123\", \"encryptedPassword\": \"$2a$10$...\", \"message\": \"Contraseña cifrada exitosamente\"}"))
+            ),
+            @ApiResponse(
+                    responseCode = "400", 
+                    description = "Solicitud inválida - contraseña vacía o nula",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @PostMapping("/encrypt-password")
+    public ResponseEntity<Map<String, String>> encryptPassword(@RequestBody Map<String, String> request) {
+        try {
+            String rawPassword = request.get("password");
+            
+            if (rawPassword == null || rawPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "La contraseña no puede estar vacía"));
+            }
+            
+            String encryptedPassword = authService.encryptPassword(rawPassword);
+            
+            return ResponseEntity.ok().body(Map.of(
+                "rawPassword", rawPassword,
+                "encryptedPassword", encryptedPassword,
+                MESSAGE_KEY, "Contraseña cifrada exitosamente"
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Error al cifrar la contraseña"));
+        }
     }
 }

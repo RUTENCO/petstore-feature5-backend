@@ -28,11 +28,17 @@ type Query {
     products: [Product!]!
     productsByCategory(categoryId: ID!): [Product!]!
     product(id: ID!): Product
+    
+    # Queries de métricas de promociones
+    promotionPerformance(promotionId: ID!): PromotionPerformance
+    promotionProductMetrics(promotionId: ID!): [ProductMetrics!]!
+    promotionHasMetrics(promotionId: ID!): Boolean!
 }
 
 type Mutation {
     # Mutaciones de autenticación
     login(email: String!, password: String!): GraphQLLoginResponse!
+    encryptPassword(password: String!): PasswordEncryptionResponse!
     
     # Mutaciones de promociones (solo admin)
     createPromotion(input: PromotionInput!): Promotion!
@@ -46,6 +52,10 @@ type Mutation {
     # Mutaciones de papelera temporal
     restorePromotion(id: ID!, userId: ID!): Boolean!
     permanentDeletePromotion(id: ID!, userId: ID!): Boolean!
+    
+    # Mutaciones de métricas (solo admin)
+    initializePromotionMetrics(promotionId: ID!): Boolean!
+    simulateMetricsUpdate(promotionId: ID!, productId: ID!, unitsSold: Int!): Boolean!
 }
 
 type Product {
@@ -125,4 +135,47 @@ input PromotionInput {
     statusId: ID!
     userId: ID
     categoryId: ID
+}
+
+# Tipos para métricas de promociones
+type PromotionPerformance {
+    promotionId: ID!
+    promotionName: String!
+    promotionDescription: String
+    discountPercentage: Float!
+    startDate: String!
+    endDate: String!
+    isActive: Boolean!
+    totalProducts: Int!
+    totalUnitsSold: Int!
+    totalRevenue: Float!
+    totalInitialInventory: Int!
+    totalCurrentInventory: Int!
+    totalInventoryDifference: Int!
+    inventoryReductionPercentage: Float!
+    lastUpdated: String
+    productMetrics: [ProductMetrics!]!
+}
+
+type ProductMetrics {
+    productId: ID!
+    productName: String!
+    productSku: String!
+    basePrice: Float!
+    discountedPrice: Float!
+    initialInventory: Int!
+    currentInventory: Int!
+    inventoryDifference: Int!
+    inventoryReductionPercentage: Float!
+    unitsSold: Int!
+    revenueGenerated: Float!
+    category: Category!
+    lastUpdated: String
+}
+
+type PasswordEncryptionResponse {
+    success: String!
+    rawPassword: String
+    encryptedPassword: String
+    message: String!
 }

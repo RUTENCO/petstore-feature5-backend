@@ -31,10 +31,13 @@ import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.exception.GraphQLException;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.NotificationConsentRepository;
+import com.petstore.backend.repository.NotificationLogRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.UserRepository;
 import com.petstore.backend.service.AuthService;
+import com.petstore.backend.service.NotificationService;
 import com.petstore.backend.service.PromotionMetricsService;
 import com.petstore.backend.service.PromotionService;
 
@@ -50,6 +53,9 @@ class GraphQLResolverTest {
     private AuthService authService;
 
     @Mock
+    private NotificationService notificationService;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -60,6 +66,12 @@ class GraphQLResolverTest {
 
     @Mock
     private PromotionRepository promotionRepository;
+
+    @Mock
+    private NotificationConsentRepository notificationConsentRepository;
+
+    @Mock
+    private NotificationLogRepository notificationLogRepository;
 
     @Mock
     private SecurityContext securityContext;
@@ -80,10 +92,13 @@ class GraphQLResolverTest {
                 promotionService,
                 promotionMetricsService,
                 authService,
+                notificationService,
                 userRepository,
                 categoryRepository,
                 productRepository,
-                promotionRepository
+                promotionRepository,
+                notificationConsentRepository,
+                notificationLogRepository
         );
 
         // Setup test entities

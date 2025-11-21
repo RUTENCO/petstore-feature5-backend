@@ -33,6 +33,12 @@ type Query {
     promotionPerformance(promotionId: ID!): PromotionPerformance
     promotionProductMetrics(promotionId: ID!): [ProductMetrics!]!
     promotionHasMetrics(promotionId: ID!): Boolean!
+    
+    # Queries de notificaciones
+    notificationConsent(userId: ID!, notificationType: NotificationType!): NotificationConsent
+    notificationConsentsByUser(userId: ID!): [NotificationConsent!]!
+    notificationLogs(userId: ID!): [NotificationLog!]!
+    notificationStatus: NotificationStatus!
 }
 
 type Mutation {
@@ -56,6 +62,10 @@ type Mutation {
     # Mutaciones de métricas (solo admin)
     initializePromotionMetrics(promotionId: ID!): Boolean!
     simulateMetricsUpdate(promotionId: ID!, productId: ID!, unitsSold: Int!): Boolean!
+    
+    # Mutaciones de notificaciones
+    updateNotificationConsent(input: NotificationConsentInput!): NotificationConsentResponse!
+    sendTestNotification(userId: ID!, promotionId: ID!): Boolean!
 }
 
 type Product {
@@ -178,4 +188,59 @@ type PasswordEncryptionResponse {
     rawPassword: String
     encryptedPassword: String
     message: String!
+}
+
+# Tipos para sistema de notificaciones
+type NotificationConsent {
+    id: ID!
+    user: User!
+    notificationType: NotificationType!
+    consentGiven: Boolean!
+    consentDate: String
+    lastModified: String
+    ipAddress: String
+}
+
+type NotificationLog {
+    id: ID!
+    user: User!
+    promotion: Promotion
+    notificationType: NotificationType!
+    recipient: String!
+    subject: String
+    content: String
+    sentAt: String!
+    status: NotificationStatus!
+    errorMessage: String
+}
+
+type NotificationStatus {
+    service: String!
+    status: String!
+    timestamp: String!
+    supportedTypes: [String!]!
+}
+
+type NotificationConsentResponse {
+    success: Boolean!
+    message: String!
+    consent: NotificationConsent
+}
+
+enum NotificationType {
+    EMAIL_PROMOTION
+    EMAIL_GENERAL
+}
+
+enum NotificationLogStatus {
+    PENDING
+    SENT
+    FAILED
+    RATE_LIMITED
+}
+
+input NotificationConsentInput {
+    userId: ID!
+    notificationType: NotificationType!
+    consentGiven: Boolean!
 }

@@ -20,15 +20,20 @@ import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionDeletedDTO;
 import com.petstore.backend.dto.PromotionPerformanceDTO;
 import com.petstore.backend.entity.Category;
+import com.petstore.backend.entity.NotificationConsent;
+import com.petstore.backend.entity.NotificationLog;
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.exception.GraphQLException;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.NotificationConsentRepository;
+import com.petstore.backend.repository.NotificationLogRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.UserRepository;
 import com.petstore.backend.service.AuthService; // Importar Logger
+import com.petstore.backend.service.NotificationService;
 import com.petstore.backend.service.PromotionMetricsService;
 import com.petstore.backend.service.PromotionService; // Importar LoggerFactory
 
@@ -38,27 +43,36 @@ public class GraphQLResolver {
     private final PromotionService promotionService;
     private final PromotionMetricsService promotionMetricsService;
     private final AuthService authService;
+    private final NotificationService notificationService;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final PromotionRepository promotionRepository;
+    private final NotificationConsentRepository notificationConsentRepository;
+    private final NotificationLogRepository notificationLogRepository;
     private static final Logger loggerGraphQL = LoggerFactory.getLogger(GraphQLResolver.class);
 
     public GraphQLResolver(
             PromotionService promotionService,
             PromotionMetricsService promotionMetricsService,
             AuthService authService,
+            NotificationService notificationService,
             UserRepository userRepository,
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
-            PromotionRepository promotionRepository) {
+            PromotionRepository promotionRepository,
+            NotificationConsentRepository notificationConsentRepository,
+            NotificationLogRepository notificationLogRepository) {
         this.promotionService = promotionService;
         this.promotionMetricsService = promotionMetricsService;
         this.authService = authService;
+        this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.promotionRepository = promotionRepository;
+        this.notificationConsentRepository = notificationConsentRepository;
+        this.notificationLogRepository = notificationLogRepository;
     }
 
     // === HELPER METHODS ===
@@ -310,7 +324,7 @@ public class GraphQLResolver {
                 input.getDescription(),
                 input.getStartDate(),
                 input.getEndDate(),
-                input.getDiscountPercentage().doubleValue(),
+                input.getDiscountPercentage() != null ? input.getDiscountPercentage().doubleValue() : 0.0,
                 input.getStatusId(),
                 input.getUserId(),
                 input.getCategoryId()
@@ -327,6 +341,23 @@ public class GraphQLResolver {
         try {
             loggerGraphQL.info("Updating promotion {} with input: {}", id, input);
             
+            // Validar campo requerido mínimo para la actualización
+            if (input.getPromotionName() == null || input.getPromotionName().trim().isEmpty()) {
+                throw new GraphQLException("VALIDATION", "Promotion name is required", "Missing required field: promotionName", null);
+            }
+            
+            // Si no se proporciona ningún campo importante además del nombre, es un error
+            boolean hasCategoryId = input.getCategoryId() != null || (input.getCategory() != null && input.getCategory().getCategoryId() != null);
+            boolean hasStatusId = input.getStatusId() != null;
+            boolean hasUserId = input.getUserId() != null;
+            boolean hasDescription = input.getDescription() != null && !input.getDescription().trim().isEmpty();
+            boolean hasDateRange = input.getStartDate() != null && input.getEndDate() != null;
+            boolean hasDiscount = input.getDiscountPercentage() != null;
+            
+            if (!hasCategoryId && !hasStatusId && !hasUserId && !hasDescription && !hasDateRange && !hasDiscount) {
+                throw new GraphQLException("VALIDATION", "At least one field besides name is required for update", "Missing required fields: provide at least categoryId, statusId, userId, description, date range, or discount", null);
+            }
+            
             // Usar el método existente updatePromotion del service
             Promotion updated = promotionService.updatePromotion(
                 id,
@@ -334,7 +365,7 @@ public class GraphQLResolver {
                 input.getDescription(),
                 input.getStartDate(),
                 input.getEndDate(),
-                input.getDiscountPercentage().doubleValue(),
+                input.getDiscountPercentage() != null ? input.getDiscountPercentage().doubleValue() : null,
                 input.getStatusId() != null ? input.getStatusId() : 1,
                 input.getUserId() != null ? input.getUserId() : 1,
                 input.getCategoryId() != null ? input.getCategoryId() : 
@@ -634,6 +665,138 @@ public class GraphQLResolver {
             return true;
         } catch (Exception e) {
             loggerGraphQL.error("Error simulating metrics update: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    // === QUERIES DE NOTIFICACIONES ===
+
+    @QueryMapping
+    public NotificationConsent notificationConsent(@Argument String userId, @Argument NotificationConsent.NotificationType notificationType) {
+        try {
+            requireAuthentication();
+            Integer id = Integer.valueOf(userId);
+            return notificationConsentRepository
+                    .findByUserIdAndNotificationType(Long.valueOf(id), notificationType)
+                    .orElse(null);
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting notification consent: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    @QueryMapping
+    public List<NotificationConsent> notificationConsentsByUser(@Argument String userId) {
+        try {
+            requireAuthentication();
+            Integer id = Integer.valueOf(userId);
+            return notificationConsentRepository.findActiveConsentsByUserId(Long.valueOf(id));
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting notification consents by user: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
+    public List<NotificationLog> notificationLogs(@Argument String userId) {
+        try {
+            requireAuthentication();
+            Integer id = Integer.valueOf(userId);
+            // Como no existe findByUserIdOrderByIdDesc, voy a usar un método existente
+            return notificationLogRepository.findByUserIdAndStatus(
+                Long.valueOf(id), 
+                NotificationLog.NotificationStatus.SENT
+            );
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting notification logs: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
+    public Map<String, Object> notificationStatus() {
+        try {
+            return Map.of(
+                "service", "Notification Service",
+                "status", "active",
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "supportedTypes", List.of("EMAIL_PROMOTION", "EMAIL_GENERAL")
+            );
+        } catch (Exception e) {
+            loggerGraphQL.error("Error getting notification status: {}", e.getMessage(), e);
+            return Map.of(
+                "service", "Notification Service",
+                "status", "error",
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "supportedTypes", List.of()
+            );
+        }
+    }
+
+    // === MUTACIONES DE NOTIFICACIONES ===
+
+    @MutationMapping
+    public Map<String, Object> updateNotificationConsent(@Argument Map<String, Object> input) {
+        try {
+            requireAuthentication();
+            
+            Integer userId = Integer.valueOf(input.get("userId").toString());
+            NotificationConsent.NotificationType notificationType = 
+                NotificationConsent.NotificationType.valueOf(input.get("notificationType").toString());
+            Boolean consentGiven = Boolean.valueOf(input.get("consentGiven").toString());
+            
+            notificationService.updateNotificationConsent(
+                userId,
+                notificationType,
+                consentGiven,
+                "GraphQL",
+                "GraphQL API"
+            );
+            
+            return Map.of(
+                "success", true,
+                "message", "Consentimiento actualizado exitosamente",
+                "consent", notificationConsentRepository
+                    .findByUserIdAndNotificationType(Long.valueOf(userId), notificationType)
+                    .orElse(null)
+            );
+            
+        } catch (Exception e) {
+            loggerGraphQL.error("Error updating notification consent: {}", e.getMessage(), e);
+            return Map.of(
+                "success", false,
+                "message", "Error actualizando consentimiento: " + e.getMessage()
+            );
+        }
+    }
+
+    @MutationMapping
+    public Boolean sendTestNotification(@Argument String userId, @Argument String promotionId) {
+        try {
+            requireAuthentication();
+            
+            Integer uid = Integer.valueOf(userId);
+            Integer pid = Integer.valueOf(promotionId);
+            
+            User user = userRepository.findById(uid).orElse(null);
+            Promotion promotion = promotionRepository.findById(pid).orElse(null);
+            
+            if (user == null || promotion == null) {
+                loggerGraphQL.error("User or promotion not found for test notification");
+                return false;
+            }
+            
+            // Solo enviar si el usuario tiene consentimiento
+            if (notificationService.hasActiveConsent(uid, NotificationConsent.NotificationType.EMAIL_PROMOTION)) {
+                notificationService.sendPromotionNotification(promotion);
+                return true;
+            } else {
+                loggerGraphQL.warn("User {} does not have active consent for email promotions", uid);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            loggerGraphQL.error("Error sending test notification: {}", e.getMessage(), e);
             return false;
         }
     }

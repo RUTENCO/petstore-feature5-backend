@@ -40,6 +40,7 @@ import com.petstore.backend.repository.PromotionDeletedRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
 import com.petstore.backend.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PromotionServiceTest {
@@ -61,6 +62,9 @@ class PromotionServiceTest {
     
     @Mock
     private ProductRepository productRepository;
+    
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PromotionService promotionService;

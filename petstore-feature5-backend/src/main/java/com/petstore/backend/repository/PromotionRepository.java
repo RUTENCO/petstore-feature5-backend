@@ -43,6 +43,10 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     @Query("SELECT p FROM Promotion p WHERE p.discountValue >= :minDiscount AND p.discountValue <= :maxDiscount")
     List<Promotion> findByDiscountRange(@Param("minDiscount") Double minDiscount, @Param("maxDiscount") Double maxDiscount);
     
+    // Buscar promociones que se activan en una ventana de tiempo específica
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'ACTIVE' AND p.startDate = :targetDate")
+    List<Promotion> findPromotionsActivatingOnDate(@Param("targetDate") LocalDate targetDate);
+    
     // Establecer actor para triggers de base de datos
     @Query(value = "SELECT public.fn_set_actor(:userId)", nativeQuery = true)
     void setActor(@Param("userId") Integer userId);

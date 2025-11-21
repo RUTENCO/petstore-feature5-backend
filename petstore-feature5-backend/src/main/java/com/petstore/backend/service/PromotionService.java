@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import com.petstore.backend.entity.Promotion;
 import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
+import com.petstore.backend.event.PromotionActivatedEvent;
 import com.petstore.backend.repository.CategoryRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
@@ -38,19 +40,22 @@ public class PromotionService {
     private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
     private final PromotionDeletedRepository promotionDeletedRepository; // Inyección de dependencia del repositorio de promociones eliminadas
     private final ProductRepository productRepository; // Inyección de dependencia del repositorio de productos
+    private final ApplicationEventPublisher eventPublisher; // Para publicar eventos de promoción
 
     public PromotionService(PromotionRepository promotionRepository,
                             StatusRepository statusRepository,
                             UserRepository userRepository,
                             CategoryRepository categoryRepository,
                             PromotionDeletedRepository promotionDeletedRepository,
-                            ProductRepository productRepository) {
+                            ProductRepository productRepository,
+                            ApplicationEventPublisher eventPublisher) {
         this.promotionRepository = promotionRepository;
         this.statusRepository = statusRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.promotionDeletedRepository = promotionDeletedRepository;
         this.productRepository = productRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -234,12 +239,34 @@ public class PromotionService {
             promotion.setCategory(category);
         }
         
-        return promotionRepository.save(promotion);
+        // Guardar la promoción
+        Promotion savedPromotion = promotionRepository.save(promotion);
+        
+        // 🔔 VERIFICAR SI SE CREA CON ESTADO ACTIVE Y DISPARAR EVENTO
+        if (statusId != null && savedPromotion.getStatus() != null) {
+            String statusName = savedPromotion.getStatus().getStatusName();
+            logger.info("🔍 Promoción '{}' creada con statusId={}, statusName='{}'", 
+                       savedPromotion.getPromotionName(), statusId, statusName);
+            
+            if (statusName.equalsIgnoreCase("ACTIVE")) {
+                logger.info("🚨 Nueva promoción '{}' creada con estado ACTIVE - Disparando evento de notificación", 
+                           savedPromotion.getPromotionName());
+                
+                // Publicar evento para que el listener envíe notificaciones automáticamente
+                eventPublisher.publishEvent(new PromotionActivatedEvent(this, savedPromotion));
+            }
+        } else {
+            logger.warn("⚠️ Promoción '{}' creada pero sin estado definido: statusId={}, status={}", 
+                       savedPromotion.getPromotionName(), statusId, savedPromotion.getStatus());
+        }
+        
+        return savedPromotion;
     }
 
     /**
-     * Actualiza una promoción existente
+     * Actualiza una promoción existente y dispara eventos si cambia a ACTIVE
      */
+    @Transactional
     public Promotion updatePromotion(Integer promotionId, String promotionName, String description,
                                    LocalDate startDate, LocalDate endDate,
                                    Double discountValue, Integer statusId,
@@ -249,6 +276,10 @@ public class PromotionService {
             return null;
         }
         
+        // Capturar el estado anterior
+        String previousStatusName = promotion.getStatus() != null ? 
+                                  promotion.getStatus().getStatusName() : null;
+        
         // Actualizar campos
         if (promotionName != null) promotion.setPromotionName(promotionName);
         if (description != null) promotion.setDescription(description);
@@ -257,9 +288,11 @@ public class PromotionService {
         if (discountValue != null) promotion.setDiscountValue(discountValue);
         
         // Actualizar entidades relacionadas
+        String newStatusName = null;
         if (statusId != null) {
             Status status = statusRepository.findById(statusId).orElse(null);
             promotion.setStatus(status);
+            newStatusName = status != null ? status.getStatusName() : null;
         }
         
         if (userId != null) {
@@ -272,7 +305,25 @@ public class PromotionService {
             promotion.setCategory(category);
         }
         
-        return promotionRepository.save(promotion);
+        // Guardar la promoción
+        Promotion savedPromotion = promotionRepository.save(promotion);
+        
+        // 🔔 DETECTAR CAMBIO A ESTADO ACTIVE Y DISPARAR EVENTO
+        boolean wasNotActive = previousStatusName == null || !previousStatusName.equalsIgnoreCase("ACTIVE");
+        boolean isNowActive = newStatusName != null && newStatusName.equalsIgnoreCase("ACTIVE");
+        
+        logger.info("🔍 DEBUG Update: Promoción '{}' - Estado anterior: '{}', Estado nuevo: '{}', wasNotActive: {}, isNowActive: {}", 
+                   promotion.getPromotionName(), previousStatusName, newStatusName, wasNotActive, isNowActive);
+        
+        if (wasNotActive && isNowActive) {
+            logger.info("🚨 Promoción '{}' cambió a ACTIVE - Disparando evento de notificación", 
+                       promotion.getPromotionName());
+            
+            // Publicar evento para que el listener envíe notificaciones automáticamente
+            eventPublisher.publishEvent(new PromotionActivatedEvent(this, savedPromotion));
+        }
+        
+        return savedPromotion;
     }
 
 

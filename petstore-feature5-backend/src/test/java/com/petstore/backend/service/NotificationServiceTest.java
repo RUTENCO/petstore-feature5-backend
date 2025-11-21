@@ -1,25 +1,29 @@
 package com.petstore.backend.service;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-
-import org.springframework.test.util.ReflectionTestUtils;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.petstore.backend.entity.NotificationConsent;
 import com.petstore.backend.entity.NotificationConsent.NotificationType;
@@ -273,9 +277,9 @@ class NotificationServiceTest {
         // When
         notificationService.sendPromotionNotificationToUser(promotion, user);
 
-        // Then
+        // Then - Acepta tanto formato español (1,5%) como formato inglés (1.5%)
         verify(emailService).sendEmail(anyString(), anyString(), argThat(content -> 
-            content.contains("¡1,5% DE DESCUENTO!")
+            content.contains("¡1,5% DE DESCUENTO!") || content.contains("¡1.5% DE DESCUENTO!")
         ));
         verify(rateLimitRepository).save(any(NotificationRateLimit.class));
     }

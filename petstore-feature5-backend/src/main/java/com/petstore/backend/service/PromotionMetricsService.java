@@ -126,6 +126,12 @@ public class PromotionMetricsService {
             metrics.setUnitsSold(unitsSold);
             metrics.setRevenueGenerated(revenueGenerated);
             metrics.setSnapshotDate(LocalDateTime.now());
+            // Recalcular variación de SKU
+            if (metrics.getInitialInventory() != null && unitsSold != null && metrics.getInitialInventory() > 0) {
+                metrics.setSkuVariationPercentage(((double) unitsSold / metrics.getInitialInventory()) * 100);
+            } else {
+                metrics.setSkuVariationPercentage(0.0);
+            }
             metrics.preUpdate();
         } else {
             // Crear nuevas métricas

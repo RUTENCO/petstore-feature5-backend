@@ -40,6 +40,9 @@ public class PromotionMetrics {
     @Column(name = "units_sold", nullable = false, columnDefinition = "INTEGER DEFAULT 0")
     private Integer unitsSold = 0;
     
+    @Column(name = "sku_variation_percentage")
+    private Double skuVariationPercentage;
+    
     @Column(name = "revenue_generated", precision = 10, scale = 2)
     private BigDecimal revenueGenerated;
     
@@ -67,6 +70,12 @@ public class PromotionMetrics {
         this.currentInventory = currentInventory;
         this.unitsSold = unitsSold;
         this.revenueGenerated = revenueGenerated;
+        // Calcular automáticamente la variación de SKU
+        if (initialInventory != null && unitsSold != null && initialInventory > 0) {
+            this.skuVariationPercentage = ((double) unitsSold / initialInventory) * 100;
+        } else {
+            this.skuVariationPercentage = 0.0;
+        }
     }
     
     // Getters y Setters
@@ -116,6 +125,20 @@ public class PromotionMetrics {
     
     public void setUnitsSold(Integer unitsSold) {
         this.unitsSold = unitsSold;
+        // Recalcular automáticamente la variación cuando cambien las unidades vendidas
+        if (initialInventory != null && unitsSold != null && initialInventory > 0) {
+            this.skuVariationPercentage = ((double) unitsSold / initialInventory) * 100;
+        } else {
+            this.skuVariationPercentage = 0.0;
+        }
+    }
+    
+    public Double getSkuVariationPercentage() {
+        return skuVariationPercentage;
+    }
+    
+    public void setSkuVariationPercentage(Double skuVariationPercentage) {
+        this.skuVariationPercentage = skuVariationPercentage;
     }
     
     public BigDecimal getRevenueGenerated() {
@@ -169,5 +192,16 @@ public class PromotionMetrics {
     public Double getInventoryReductionPercentage() {
         if (initialInventory == 0) return 0.0;
         return ((double) getInventoryDifference() / initialInventory) * 100;
+    }
+    
+    /**
+     * Calcula y actualiza la variación de SKU en porcentaje basado en unidades vendidas
+     */
+    public void calculateSkuVariationPercentage() {
+        if (initialInventory != null && initialInventory > 0 && unitsSold != null) {
+            this.skuVariationPercentage = ((double) unitsSold / initialInventory) * 100;
+        } else {
+            this.skuVariationPercentage = 0.0;
+        }
     }
 }

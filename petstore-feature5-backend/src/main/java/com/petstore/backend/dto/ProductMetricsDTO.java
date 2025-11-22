@@ -38,6 +38,9 @@ public class ProductMetricsDTO {
     @Schema(description = "Unidades vendidas durante la promoción", example = "27")
     private Integer unitsSold;
     
+    @Schema(description = "Variación de SKU en porcentaje (inicial - final basado en unidades vendidas)", example = "54.0")
+    private Double skuVariationPercentage;
+    
     @Schema(description = "Ingresos generados por este producto", example = "526.23")
     private BigDecimal revenueGenerated;
     
@@ -152,6 +155,15 @@ public class ProductMetricsDTO {
     
     public void setUnitsSold(Integer unitsSold) {
         this.unitsSold = unitsSold;
+        calculateDerivedFields(); // Recalcular cuando cambien las unidades vendidas
+    }
+    
+    public Double getSkuVariationPercentage() {
+        return skuVariationPercentage;
+    }
+    
+    public void setSkuVariationPercentage(Double skuVariationPercentage) {
+        this.skuVariationPercentage = skuVariationPercentage;
     }
     
     public BigDecimal getRevenueGenerated() {
@@ -188,6 +200,16 @@ public class ProductMetricsDTO {
                     ((double) inventoryDifference / initialInventory) * 100;
             } else {
                 this.inventoryReductionPercentage = 0.0;
+            }
+        }
+        
+        // Calcular variación de SKU basado en unidades vendidas vs inventario inicial
+        if (initialInventory != null && unitsSold != null) {
+            if (initialInventory > 0) {
+                this.skuVariationPercentage = 
+                    ((double) unitsSold / initialInventory) * 100;
+            } else {
+                this.skuVariationPercentage = 0.0;
             }
         }
     }

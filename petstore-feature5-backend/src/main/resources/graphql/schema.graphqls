@@ -163,6 +163,7 @@ type PromotionPerformance {
     totalCurrentInventory: Int!
     totalInventoryDifference: Int!
     inventoryReductionPercentage: Float!
+    averageSkuVariationPercentage: Float!
     lastUpdated: String
     productMetrics: [ProductMetrics!]!
 }
@@ -178,6 +179,7 @@ type ProductMetrics {
     inventoryDifference: Int!
     inventoryReductionPercentage: Float!
     unitsSold: Int!
+    skuVariationPercentage: Float!
     revenueGenerated: Float!
     category: Category!
     lastUpdated: String

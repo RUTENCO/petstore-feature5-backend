@@ -51,6 +51,9 @@ public class PromotionPerformanceDTO {
     @Schema(description = "Porcentaje de reducción de inventario", example = "46.8")
     private Double inventoryReductionPercentage;
     
+    @Schema(description = "Variación promedio de SKU en porcentaje (basado en unidades vendidas)", example = "46.8")
+    private Double averageSkuVariationPercentage;
+    
     @Schema(description = "Fecha de la última actualización de métricas")
     private LocalDateTime lastUpdated;
     
@@ -199,6 +202,14 @@ public class PromotionPerformanceDTO {
         this.inventoryReductionPercentage = inventoryReductionPercentage;
     }
     
+    public Double getAverageSkuVariationPercentage() {
+        return averageSkuVariationPercentage;
+    }
+    
+    public void setAverageSkuVariationPercentage(Double averageSkuVariationPercentage) {
+        this.averageSkuVariationPercentage = averageSkuVariationPercentage;
+    }
+    
     public LocalDateTime getLastUpdated() {
         return lastUpdated;
     }
@@ -225,6 +236,25 @@ public class PromotionPerformanceDTO {
                     ((double) totalInventoryDifference / totalInitialInventory) * 100;
             } else {
                 this.inventoryReductionPercentage = 0.0;
+            }
+        }
+        
+        // Calcular variación promedio de SKU basada en las métricas de productos
+        if (productMetrics != null && !productMetrics.isEmpty()) {
+            double totalVariation = 0.0;
+            int validProducts = 0;
+            
+            for (ProductMetricsDTO productMetric : productMetrics) {
+                if (productMetric.getSkuVariationPercentage() != null) {
+                    totalVariation += productMetric.getSkuVariationPercentage();
+                    validProducts++;
+                }
+            }
+            
+            if (validProducts > 0) {
+                this.averageSkuVariationPercentage = totalVariation / validProducts;
+            } else {
+                this.averageSkuVariationPercentage = 0.0;
             }
         }
     }

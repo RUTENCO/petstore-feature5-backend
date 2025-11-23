@@ -23,8 +23,10 @@ import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.event.PromotionActivatedEvent;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.NotificationLogRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
+import com.petstore.backend.repository.PromotionMetricsRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
 import com.petstore.backend.repository.UserRepository;
@@ -40,6 +42,8 @@ public class PromotionService {
     private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
     private final PromotionDeletedRepository promotionDeletedRepository; // Inyección de dependencia del repositorio de promociones eliminadas
     private final ProductRepository productRepository; // Inyección de dependencia del repositorio de productos
+    private final PromotionMetricsRepository promotionMetricsRepository; // Inyección de dependencia del repositorio de métricas de promociones
+    private final NotificationLogRepository notificationLogRepository; // Inyección de dependencia del repositorio de logs de notificaciones
     private final ApplicationEventPublisher eventPublisher; // Para publicar eventos de promoción
 
     public PromotionService(PromotionRepository promotionRepository,
@@ -48,6 +52,8 @@ public class PromotionService {
                             CategoryRepository categoryRepository,
                             PromotionDeletedRepository promotionDeletedRepository,
                             ProductRepository productRepository,
+                            PromotionMetricsRepository promotionMetricsRepository,
+                            NotificationLogRepository notificationLogRepository,
                             ApplicationEventPublisher eventPublisher) {
         this.promotionRepository = promotionRepository;
         this.statusRepository = statusRepository;
@@ -55,6 +61,8 @@ public class PromotionService {
         this.categoryRepository = categoryRepository;
         this.promotionDeletedRepository = promotionDeletedRepository;
         this.productRepository = productRepository;
+        this.promotionMetricsRepository = promotionMetricsRepository;
+        this.notificationLogRepository = notificationLogRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -463,19 +471,44 @@ public class PromotionService {
                 return false;
             }
             
-            // 1. Establecer el actor (usuario que elimina) para los triggers de BD
+            // 1. Eliminar notification logs primero para evitar violación de clave foránea
+            logger.info("Eliminando notification logs de promoción para promotion_id: {}", promotionId);
+            List<com.petstore.backend.entity.NotificationLog> existingLogs = 
+                notificationLogRepository.findByPromotionId(Long.valueOf(promotionId));
+            
+            if (!existingLogs.isEmpty()) {
+                notificationLogRepository.deleteAll(existingLogs);
+                logger.info("Eliminados {} logs de notificación para la promoción {}", existingLogs.size(), promotionId);
+            } else {
+                logger.info("No se encontraron logs de notificación para la promoción {}", promotionId);
+            }
+            
+            // 2. Eliminar métricas de promoción para evitar violación de clave foránea
+            logger.info("Eliminando métricas de promoción para promotion_id: {}", promotionId);
+            List<com.petstore.backend.entity.PromotionMetrics> existingMetrics = 
+                promotionMetricsRepository.findByPromotionPromotionId(promotionId);
+            
+            if (!existingMetrics.isEmpty()) {
+                promotionMetricsRepository.deleteAll(existingMetrics);
+                logger.info("Eliminadas {} métricas para la promoción {}", existingMetrics.size(), promotionId);
+            } else {
+                logger.info("No se encontraron métricas para la promoción {}", promotionId);
+            }
+            
+            // 3. Establecer el actor (usuario que elimina) para los triggers de BD
             if (deletedByUserId != null) {
                 // Usar función de BD para establecer el contexto del usuario
                 promotionRepository.setActor(deletedByUserId);
             }
             
-            // 2. eliminar la promoción - Los triggers se encargan del proceso
+            // 4. eliminar la promoción - Los triggers se encargan del resto del proceso
             //    - trg_promotions_soft_delete: Desvincula productos, mueve a promotions_deleted
             //    - trg_promotions_audit: Registra la auditoría
             //    - trg_promotions_deleted_guard: Impide duplicados en promotions_deleted
             Promotion promotion = promotionOpt.get();
             promotionRepository.delete(promotion);
             
+            logger.info("Promoción {} eliminada exitosamente", promotionId);
             return true;
             
         } catch (Exception e) {

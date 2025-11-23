@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionDeletedDTO;
@@ -35,12 +36,13 @@ import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.NotificationLogRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
+import com.petstore.backend.repository.PromotionMetricsRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
 import com.petstore.backend.repository.UserRepository;
-import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PromotionServiceTest {
@@ -62,6 +64,12 @@ class PromotionServiceTest {
     
     @Mock
     private ProductRepository productRepository;
+    
+    @Mock
+    private PromotionMetricsRepository promotionMetricsRepository;
+    
+    @Mock
+    private NotificationLogRepository notificationLogRepository;
     
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -515,6 +523,10 @@ class PromotionServiceTest {
         // Given
         Integer promotionId = 1;
         when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(testPromotion));
+        when(notificationLogRepository.findByPromotionId(Long.valueOf(promotionId)))
+            .thenReturn(Arrays.asList()); // Sin logs asociados
+        when(promotionMetricsRepository.findByPromotionPromotionId(promotionId))
+            .thenReturn(Arrays.asList()); // Sin métricas asociadas
 
         // When
         boolean result = promotionService.deletePromotion(promotionId);
@@ -522,6 +534,8 @@ class PromotionServiceTest {
         // Then
         assertTrue(result);
         verify(promotionRepository).findById(promotionId);
+        verify(notificationLogRepository).findByPromotionId(Long.valueOf(promotionId));
+        verify(promotionMetricsRepository).findByPromotionPromotionId(promotionId);
         verify(promotionRepository).delete(testPromotion);
     }
 
@@ -531,6 +545,10 @@ class PromotionServiceTest {
         Integer promotionId = 1;
         Integer deletedByUserId = 1;
         when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(testPromotion));
+        when(notificationLogRepository.findByPromotionId(Long.valueOf(promotionId)))
+            .thenReturn(Arrays.asList()); // Sin logs asociados
+        when(promotionMetricsRepository.findByPromotionPromotionId(promotionId))
+            .thenReturn(Arrays.asList()); // Sin métricas asociadas
 
         // When
         boolean result = promotionService.deletePromotion(promotionId, deletedByUserId);
@@ -538,6 +556,8 @@ class PromotionServiceTest {
         // Then
         assertTrue(result);
         verify(promotionRepository).findById(promotionId);
+        verify(notificationLogRepository).findByPromotionId(Long.valueOf(promotionId));
+        verify(promotionMetricsRepository).findByPromotionPromotionId(promotionId);
         verify(promotionRepository).setActor(deletedByUserId);
         verify(promotionRepository).delete(testPromotion);
     }

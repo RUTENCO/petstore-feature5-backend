@@ -38,7 +38,7 @@ public class EmailService {
      */
     public boolean sendEmail(String to, String subject, String htmlContent) {
         try {
-            logger.info("Enviando email a: {}", to);
+            logger.info("Enviando email a: {} desde: {} ({})", to, fromEmail, fromName);
             
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -48,13 +48,23 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlContent, true); // true = HTML content
             
+            logger.debug("Intentando enviar mensaje SMTP...");
             javaMailSender.send(message);
             
             logger.info("Email enviado exitosamente a: {}", to);
             return true;
             
+        } catch (org.springframework.mail.MailAuthenticationException e) {
+            logger.error("Error de autenticación enviando email a {}: {}", to, e.getMessage());
+            logger.error("Verificar credenciales de email y App Password de Gmail");
+            return false;
+        } catch (org.springframework.mail.MailSendException e) {
+            logger.error("Error de envío de email a {}: {}", to, e.getMessage());
+            logger.error("Posible problema de conectividad o configuración SMTP");
+            return false;
         } catch (Exception e) {
-            logger.error("Error enviando email a {}: {}", to, e.getMessage());
+            logger.error("Error general enviando email a {}: {} - Tipo: {}", to, e.getMessage(), e.getClass().getSimpleName());
+            logger.error("Stack trace completo:", e);
             return false;
         }
     }

@@ -82,6 +82,54 @@ public class EmailDebugController {
     }
     
     /**
+     * Endpoint para probar conexión SMTP real con autenticación
+     */
+    @PostMapping("/test-smtp-real")
+    public Map<String, Object> testSmtpConnectionReal() {
+        try {
+            // Crear mensaje de prueba real
+            var message = javaMailSender.createMimeMessage();
+            var helper = new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom(fromEmail, fromName);
+            helper.setTo("test@example.com"); // Email falso para probar autenticación
+            helper.setSubject("Test de conexión SMTP");
+            helper.setText("Test", false);
+            
+            // Intentar enviar (fallará por email inválido pero probará autenticación)
+            try {
+                javaMailSender.send(message);
+                return Map.of(
+                    "success", true,
+                    "message", "Conexión SMTP y autenticación exitosa"
+                );
+            } catch (Exception sendEx) {
+                String errorMsg = sendEx.getMessage().toLowerCase();
+                if (errorMsg.contains("authentication") || errorMsg.contains("auth")) {
+                    return Map.of(
+                        "success", false,
+                        "error", "Error de autenticación: " + sendEx.getMessage(),
+                        "diagnosis", "Credenciales incorrectas o App Password inválido"
+                    );
+                } else {
+                    return Map.of(
+                        "success", true,
+                        "message", "Autenticación exitosa (error esperado por email de prueba)",
+                        "note", "La autenticación funciona, error: " + sendEx.getMessage()
+                    );
+                }
+            }
+            
+        } catch (Exception e) {
+            return Map.of(
+                "success", false,
+                "error", e.getMessage(),
+                "errorClass", e.getClass().getSimpleName()
+            );
+        }
+    }
+    
+    /**
      * Endpoint para enviar email de prueba con diagnóstico detallado
      */
     @PostMapping("/send-test-email")
@@ -97,18 +145,57 @@ public class EmailDebugController {
                 return result;
             }
             
-            // Intentar enviar email
-            boolean sent = emailService.sendTestEmail(email);
-            
-            result.put("success", sent);
-            result.put("message", sent ? "Email enviado exitosamente" : "Error al enviar email");
-            result.put("config", getEmailConfig());
-            
-            return result;
+            // Intentar enviar email con más detalles del error
+            try {
+                boolean sent = emailService.sendTestEmail(email);
+                
+                result.put("success", sent);
+                result.put("message", sent ? "Email enviado exitosamente" : "Error al enviar email");
+                result.put("config", getEmailConfig());
+                result.put("timestamp", java.time.LocalDateTime.now().toString());
+                
+                if (!sent) {
+                    result.put("possibleCauses", java.util.List.of(
+                        "Gmail App Password incorrecto",
+                        "Cuenta de Gmail bloqueada temporalmente", 
+                        "Verificación en 2 pasos no activada",
+                        "Firewall de Render bloqueando SMTP",
+                        "Límites de rate limiting de Gmail"
+                    ));
+                    result.put("recommendations", java.util.List.of(
+                        "Verificar App Password en Gmail",
+                        "Revisar bandeja de spam",
+                        "Intentar con SendGrid o Mailgun",
+                        "Verificar logs de aplicación"
+                    ));
+                }
+                
+                return result;
+                
+            } catch (Exception emailException) {
+                result.put("success", false);
+                result.put("error", "Excepción al enviar email: " + emailException.getMessage());
+                result.put("errorClass", emailException.getClass().getSimpleName());
+                result.put("config", getEmailConfig());
+                
+                // Diagnóstico específico por tipo de error
+                String errorMsg = emailException.getMessage().toLowerCase();
+                if (errorMsg.contains("authentication")) {
+                    result.put("diagnosis", "Error de autenticación - Verificar App Password de Gmail");
+                } else if (errorMsg.contains("connection")) {
+                    result.put("diagnosis", "Error de conexión - Render puede estar bloqueando SMTP");
+                } else if (errorMsg.contains("timeout")) {
+                    result.put("diagnosis", "Timeout - Problemas de red o configuración de puertos");
+                } else {
+                    result.put("diagnosis", "Error no identificado - Revisar configuración completa");
+                }
+                
+                return result;
+            }
             
         } catch (Exception e) {
             result.put("success", false);
-            result.put("error", e.getMessage());
+            result.put("error", "Error general: " + e.getMessage());
             result.put("errorClass", e.getClass().getSimpleName());
             result.put("config", getEmailConfig());
             return result;

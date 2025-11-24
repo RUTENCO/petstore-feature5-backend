@@ -1,27 +1,24 @@
-# 🔧 Configuración de Email en Producción (Render)
+# 🔧 Configuración de Email con Resend en Producción (Render)
 
 ## Variables de Entorno Requeridas
 
-Para que el sistema de notificaciones funcione correctamente en Render, debes configurar las siguientes variables de entorno:
+Para que el sistema de notificaciones funcione correctamente en Render con **Resend API**, debes configurar las siguientes variables de entorno:
 
-### **📧 Configuración de Email (Gmail)**
+### **📧 Configuración de Email (Resend API)**
 
 ```bash
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USERNAME=tu-email@gmail.com
-EMAIL_PASSWORD=tu-app-password
-EMAIL_FROM=noreply@petstore.com
-EMAIL_FROM_NAME=PetStore Notifications
+RESEND_API_KEY=re_KsUD3cH5_Fgt6TA5xspRi9UacScJAbJYV
+RESEND_FROM=onboarding@resend.dev
+RESEND_TO=petstorenotifications@gmail.com
+RESEND_FROM_NAME=PetStore Notifications
 ```
 
-### **🔒 Configuración de App Password para Gmail**
+### **� Configuración de Resend**
 
-1. Ve a tu cuenta de Google: https://myaccount.google.com/
-2. Activa la verificación en 2 pasos
-3. Ve a "Seguridad" → "Verificación en 2 pasos" → "Contraseñas de aplicaciones"
-4. Genera una nueva contraseña de aplicación
-5. Usa esa contraseña en `MAIL_PASSWORD` (no tu contraseña normal)
+1. Ve a tu cuenta de Resend: https://resend.com/
+2. En el plan gratuito solo puedes enviar desde `onboarding@resend.dev`
+3. Solo puedes enviar a un email verificado (en este caso: `petstorenotifications@gmail.com`)
+4. Tienes límite de 100 emails por día
 
 ### **🌐 Variables de Entorno en Render**
 
@@ -30,12 +27,10 @@ EMAIL_FROM_NAME=PetStore Notifications
 3. Agrega las siguientes variables:
 
 ```
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USERNAME=tu-email@gmail.com
-EMAIL_PASSWORD=abcd-efgh-ijkl-mnop
-EMAIL_FROM=noreply@petstore.com
-EMAIL_FROM_NAME=PetStore Notifications
+RESEND_API_KEY=re_KsUD3cH5_Fgt6TA5xspRi9UacScJAbJYV
+RESEND_FROM=onboarding@resend.dev
+RESEND_TO=petstorenotifications@gmail.com
+RESEND_FROM_NAME=PetStore Notifications
 ```
 
 ### **🧪 Endpoints de Diagnóstico**
@@ -43,53 +38,41 @@ EMAIL_FROM_NAME=PetStore Notifications
 Una vez desplegado, puedes usar estos endpoints para diagnosticar problemas:
 
 ```bash
-# Verificar configuración de email
+# Verificar configuración de Resend
 GET https://tu-app.onrender.com/api/debug/email-config
 
-# Probar conexión SMTP
-POST https://tu-app.onrender.com/api/debug/test-smtp
+# Probar Resend API
+POST https://tu-app.onrender.com/api/debug/test-resend
 
 # Enviar email de prueba
-POST https://tu-app.onrender.com/api/debug/send-test-email?email=tu-email@example.com
+POST https://tu-app.onrender.com/api/debug/send-test-email
 ```
 
 ### **🚨 Problemas Comunes y Soluciones**
 
-#### **1. "Error al enviar email" en base de datos**
-- **Causa**: Variables de entorno no configuradas o incorrectas
-- **Solución**: Verificar que todas las variables están configuradas en Render
+#### **1. "API Key de Resend no configurado"**
+- **Causa**: Variable `RESEND_API_KEY` no configurada en Render
+- **Solución**: Verificar que la variable esté configurada correctamente
 
-#### **2. "Connection refused" o "Timeout"**
-- **Causa**: Render bloquea conexiones SMTP salientes
-- **Solución**: Usar servicios como SendGrid, Mailgun, o AWS SES
+#### **2. "Error 401 - Unauthorized"**
+- **Causa**: API Key inválido o expirado
+- **Solución**: Regenerar API Key en Resend Dashboard
 
-#### **3. "Authentication failed"**
-- **Causa**: Contraseña incorrecta o falta App Password
-- **Solución**: Generar App Password en Gmail
+#### **3. "Error 403 - Domain not verified"**
+- **Causa**: Intento de usar dominio no verificado en plan gratuito
+- **Solución**: Usar solo `onboarding@resend.dev` como remitente
 
-#### **4. Emails no llegan a la bandeja**
-- **Causa**: Filtros de spam o problemas de reputación
-- **Solución**: Verificar carpeta de spam, usar dominio verificado
+#### **4. "Rate limit exceeded"**
+- **Causa**: Superaste el límite de 100 emails/día
+- **Solución**: Esperar al siguiente día o actualizar plan
 
-### **🔄 Alternativas Recomendadas para Producción**
+### **✅ Ventajas de Resend vs SMTP**
 
-Si Gmail no funciona en Render, considera usar servicios profesionales:
-
-#### **SendGrid (Recomendado)**
-```bash
-EMAIL_HOST=smtp.sendgrid.net
-EMAIL_PORT=587
-EMAIL_USERNAME=apikey
-EMAIL_PASSWORD=tu-sendgrid-api-key
-```
-
-#### **Mailgun**
-```bash
-EMAIL_HOST=smtp.mailgun.org
-EMAIL_PORT=587
-EMAIL_USERNAME=postmaster@tu-dominio.mailgun.org
-EMAIL_PASSWORD=tu-mailgun-password
-```
+- ✅ **No bloqueado por Render** (API HTTP vs SMTP)
+- ✅ **Configuración más simple** (solo API key)
+- ✅ **Mejor deliverability** (infraestructura profesional)
+- ✅ **Logs detallados** de entrega
+- ✅ **Sin problemas de firewall**
 
 ### **📝 Verificación Paso a Paso**
 

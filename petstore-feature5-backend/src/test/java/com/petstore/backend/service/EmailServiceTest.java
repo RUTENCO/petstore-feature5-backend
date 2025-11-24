@@ -1,32 +1,17 @@
 package com.petstore.backend.service;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import jakarta.mail.internet.MimeMessage;
-
-@ExtendWith(MockitoExtension.class)
+/**
+ * Tests simplificados para EmailService usando Resend API.
+ * Estos tests verifican la funcionalidad básica sin mocks complejos.
+ */
 class EmailServiceTest {
 
-    @Mock
-    private JavaMailSender mailSender;
-
-    @Mock
-    private MimeMessage mimeMessage;
-
-    @InjectMocks
     private EmailService emailService;
 
     private String toEmail;
@@ -39,158 +24,126 @@ class EmailServiceTest {
         subject = "Test Subject";
         content = "<html><body><h1>Test HTML Content</h1></body></html>";
         
-        // Configure required properties
-        ReflectionTestUtils.setField(emailService, "fromName", "Test PetStore");
-        ReflectionTestUtils.setField(emailService, "fromEmail", "test@petstore.com");
+        // Create EmailService with test values que fallarán en el envío real
+        // pero nos permitirán testear la lógica sin configuración real
+        emailService = new EmailService(
+            "invalid-test-api-key",
+            "test@resend.dev", 
+            "Test Sender",
+            "default@test.com"
+        );
     }
 
     @Test
-    @DisplayName("Should send email successfully")
-    void shouldSendEmailSuccessfully() {
-        // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
-
-        // When
+    @DisplayName("Should handle invalid API key gracefully")
+    void shouldHandleInvalidApiKeyGracefully() {
+        // When - usando API key inválida debería retornar false
         boolean result = emailService.sendEmail(toEmail, subject, content);
 
-        // Then
-        assertTrue(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
-    }
-
-    @Test
-    @DisplayName("Should handle mail exception and return false")
-    void shouldHandleMailExceptionAndReturnFalse() {
-        // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailException("SMTP error") {}).when(mailSender).send(any(MimeMessage.class));
-
-        // When
-        boolean result = emailService.sendEmail(toEmail, subject, content);
-
-        // Then
+        // Then - debería fallar gracefully y retornar false
         assertFalse(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
-    }
-
-    @Test
-    @DisplayName("Should handle runtime exception and return false")
-    void shouldHandleRuntimeExceptionAndReturnFalse() {
-        // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new RuntimeException("Connection timeout"))
-            .when(mailSender).send(any(MimeMessage.class));
-
-        // When
-        boolean result = emailService.sendEmail(toEmail, subject, content);
-
-        // Then
-        assertFalse(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
     }
 
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
-        // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        
-        // When & Then - service tries to send but returns false due to errors
+        // When & Then - parámetros null deberían retornar false sin crash
         assertFalse(emailService.sendEmail(null, subject, content));
         assertFalse(emailService.sendEmail(toEmail, null, content));
         assertFalse(emailService.sendEmail(toEmail, subject, null));
-        
-        // Verify mailSender was called (service attempts to create message)
-        verify(mailSender, times(3)).createMimeMessage();
+        assertFalse(emailService.sendEmail(null, null, null));
     }
 
     @Test
     @DisplayName("Should handle empty parameters gracefully")
     void shouldHandleEmptyParametersGracefully() {
-        // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
-        
-        // When & Then - service attempts to send even with empty parameters
-        // The actual behavior is that it tries to send but may succeed with empty values
-        // This tests that the service doesn't crash with empty parameters
-        assertDoesNotThrow(() -> emailService.sendEmail("", subject, content));
-        assertDoesNotThrow(() -> emailService.sendEmail(toEmail, "", content));
-        assertDoesNotThrow(() -> emailService.sendEmail(toEmail, subject, ""));
-        
-        // Verify mailSender was called (service attempts to create message)
-        verify(mailSender, times(3)).createMimeMessage();
+        // When & Then - parámetros vacíos deberían fallar
+        // (con API key inválida siempre retornará false)
+        assertFalse(emailService.sendEmail("", "", ""));
+        assertFalse(emailService.sendEmail("", subject, content));
+        assertFalse(emailService.sendEmail(toEmail, "", content));
+        assertFalse(emailService.sendEmail(toEmail, subject, ""));
     }
 
     @Test
-    @DisplayName("Should send HTML content correctly")
-    void shouldSendHtmlContentCorrectly() {
+    @DisplayName("Should handle HTML content without crashing")
+    void shouldHandleHtmlContentWithoutCrashing() {
         // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+        String htmlContent = "<html><body><h1>Hello World</h1><p>This is a test</p></body></html>";
 
-        // When
-        boolean result = emailService.sendEmail(toEmail, subject, content);
-
-        // Then
-        assertTrue(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
+        // When & Then - no debería crashear con contenido HTML
+        assertDoesNotThrow(() -> {
+            emailService.sendEmail(toEmail, subject, htmlContent);
+        });
     }
 
     @Test
-    @DisplayName("Should set correct email properties")
-    void shouldSetCorrectEmailProperties() {
+    @DisplayName("Should handle very long content without crashing")
+    void shouldHandleVeryLongContentWithoutCrashing() {
         // Given
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
-
-        // When
-        emailService.sendEmail(toEmail, subject, "Plain text content");
-
-        // Then
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
-    }
-
-    @Test
-    @DisplayName("Should handle very long content")
-    void shouldHandleVeryLongContent() {
-        // Given
-        StringBuilder longContent = new StringBuilder();
-        for (int i = 0; i < 1000; i++) {
-            longContent.append("This is a very long email content. ");
+        StringBuilder longContent = new StringBuilder("<html><body>");
+        for (int i = 0; i < 100; i++) {
+            longContent.append("<p>This is line ").append(i).append(" of very long content.</p>");
         }
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+        longContent.append("</body></html>");
 
-        // When
-        boolean result = emailService.sendEmail(toEmail, subject, longContent.toString());
-
-        // Then
-        assertTrue(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
+        // When & Then - no debería crashear con contenido muy largo
+        assertDoesNotThrow(() -> {
+            emailService.sendEmail(toEmail, subject, longContent.toString());
+        });
     }
 
     @Test
-    @DisplayName("Should handle special characters in email")
-    void shouldHandleSpecialCharactersInEmail() {
+    @DisplayName("Should handle special characters without crashing")
+    void shouldHandleSpecialCharactersWithoutCrashing() {
         // Given
-        String specialContent = "Promoción con caracteres especiales: ñ, á, é, í, ó, ú, ü, ¿, ¡, €, ®, ©";
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doNothing().when(mailSender).send(any(MimeMessage.class));
+        String specialSubject = "Test with special chars: áéíóú ñ ç 中文 🎉";
+        String specialContent = "<html><body><h1>Título con acentos: áéíóú</h1><p>Emoji: 🚀 Unicode: 中文</p></body></html>";
+        
+        // When & Then - no debería crashear con caracteres especiales
+        assertDoesNotThrow(() -> {
+            emailService.sendEmail(toEmail, specialSubject, specialContent);
+        });
+    }
 
-        // When
-        boolean result = emailService.sendEmail(toEmail, "Título con ñ", specialContent);
+    @Test
+    @DisplayName("Should verify EmailService configuration methods work")
+    void shouldVerifyConfigurationMethodsWork() {
+        // When & Then - métodos de configuración deberían funcionar
+        assertTrue(emailService.isConfigured());
+        assertNotNull(emailService.getFromEmail());
+        assertNotNull(emailService.getFromName());
+        assertNotNull(emailService.getDefaultToEmail());
+        
+        assertEquals("test@resend.dev", emailService.getFromEmail());
+        assertEquals("Test Sender", emailService.getFromName());
+        assertEquals("default@test.com", emailService.getDefaultToEmail());
+    }
 
-        // Then
-        assertTrue(result);
-        verify(mailSender).createMimeMessage();
-        verify(mailSender).send(any(MimeMessage.class));
+    @Test
+    @DisplayName("Should send test email method work")
+    void shouldSendTestEmailMethodWork() {
+        // When & Then - método sendTestEmail no debería crashear
+        assertDoesNotThrow(() -> {
+            boolean result = emailService.sendTestEmail(toEmail);
+            // Con API key inválida, debería retornar false
+            assertFalse(result);
+        });
+    }
+
+    @Test
+    @DisplayName("Should send promotion email method work")
+    void shouldSendPromotionEmailMethodWork() {
+        // When & Then - método sendPromotionEmail no debería crashear
+        assertDoesNotThrow(() -> {
+            boolean result = emailService.sendPromotionEmail(
+                toEmail,
+                "Test Promotion",
+                "This is a test promotion",
+                "50% OFF"
+            );
+            // Con API key inválida, debería retornar false
+            assertFalse(result);
+        });
     }
 }

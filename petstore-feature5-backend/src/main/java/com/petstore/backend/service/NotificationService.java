@@ -119,7 +119,7 @@ public class NotificationService {
             log.setSentAt(LocalDateTime.now());
             log.setStatus(NotificationLog.NotificationStatus.PENDING);
             
-            // Intentar enviar email
+            // Intentar enviar email usando Resend
             boolean sent = emailService.sendEmail(user.getEmail(), subject, content);
             
             if (sent) {

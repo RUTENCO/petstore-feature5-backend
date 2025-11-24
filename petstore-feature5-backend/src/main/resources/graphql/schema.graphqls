@@ -142,7 +142,7 @@ input PromotionInput {
     startDate: String!
     endDate: String!
     discountPercentage: Float!
-    statusId: ID!
+    statusId: ID  # Opcional - si no se proporciona, se calcula automáticamente basado en fechas
     userId: ID
     categoryId: ID
 }

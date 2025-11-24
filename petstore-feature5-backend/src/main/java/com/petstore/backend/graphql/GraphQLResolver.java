@@ -311,12 +311,10 @@ public class GraphQLResolver {
             if (input.getCategoryId() == null) {
                 throw new GraphQLException("CREATE", "CategoryId is required", "CategoryId cannot be null");
             }
-            if (input.getStatusId() == null) {
-                throw new GraphQLException("CREATE", "StatusId is required", "StatusId cannot be null");
-            }
             if (input.getUserId() == null) {
                 throw new GraphQLException("CREATE", "UserId is required", "UserId cannot be null");
             }
+            // statusId es opcional - si no se proporciona, se calculará automáticamente
             
             // Usar el método existente createPromotion del service
             return promotionService.createPromotion(
@@ -325,10 +323,14 @@ public class GraphQLResolver {
                 input.getStartDate(),
                 input.getEndDate(),
                 input.getDiscountPercentage() != null ? input.getDiscountPercentage().doubleValue() : 0.0,
-                input.getStatusId(),
+                input.getStatusId(), // Puede ser null
                 input.getUserId(),
                 input.getCategoryId()
             );
+        } catch (IllegalArgumentException e) {
+            // Manejar errores de validación específicos (como fechas inválidas)
+            loggerGraphQL.error("Validation error creating promotion: {}", e.getMessage());
+            throw new GraphQLException("VALIDATION_ERROR", e.getMessage(), "Error de validación en la creación de promoción");
         } catch (Exception e) {
             loggerGraphQL.error("Error creating promotion: {}", e.getMessage(), e);
             throw new GraphQLException("CREATE", "Failed to create promotion", "Input: " + input + ", Error: " + e.getMessage(), e);
@@ -359,6 +361,7 @@ public class GraphQLResolver {
             }
             
             // Usar el método existente updatePromotion del service
+            // statusId puede ser null para cálculo automático
             Promotion updated = promotionService.updatePromotion(
                 id,
                 input.getPromotionName(),
@@ -366,13 +369,17 @@ public class GraphQLResolver {
                 input.getStartDate(),
                 input.getEndDate(),
                 input.getDiscountPercentage() != null ? input.getDiscountPercentage().doubleValue() : null,
-                input.getStatusId() != null ? input.getStatusId() : 1,
+                input.getStatusId(), // Puede ser null para cálculo automático
                 input.getUserId() != null ? input.getUserId() : 1,
                 input.getCategoryId() != null ? input.getCategoryId() : 
                     (input.getCategory() != null ? input.getCategory().getCategoryId() : null)
             );
             
             return updated;
+        } catch (IllegalArgumentException e) {
+            // Manejar errores de validación específicos (como fechas inválidas)
+            loggerGraphQL.error("Validation error updating promotion {}: {}", id, e.getMessage());
+            throw new GraphQLException("VALIDATION_ERROR", e.getMessage(), "Error de validación en la actualización de promoción");
         } catch (Exception e) {
             loggerGraphQL.error("Error updating promotion {}: {}", id, e.getMessage(), e);
             throw new GraphQLException("UPDATE", "Failed to update promotion", "ID: " + id + ", Input: " + input + ", Error: " + e.getMessage(), e);

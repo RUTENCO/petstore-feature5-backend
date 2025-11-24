@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
@@ -663,7 +664,7 @@ class GraphQLResolverTest {
     }
 
     @Test
-    void updatePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+    void updatePromotion_WhenServiceThrowsException_ShouldThrowGraphQLException() {
         // Given
         setupAuthenticatedUser();
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
@@ -678,15 +679,24 @@ class GraphQLResolverTest {
         categoryDTO.setCategoryId(1);
         promotionDTO.setCategory(categoryDTO);
         
-        when(promotionService.updatePromotion(any(Integer.class), anyString(), anyString(), 
-                any(java.time.LocalDate.class), any(java.time.LocalDate.class), any(Double.class), 
-                any(Integer.class), any(Integer.class), any(Integer.class)))
-                .thenThrow(new RuntimeException("Database error"));
+        // Configurar mock con matchers más específicos que coincidan con el resolver
+        when(promotionService.updatePromotion(
+                eq(1), // id
+                eq("Updated Sale"), // promotionName
+                eq("Updated description"), // description
+                any(java.time.LocalDate.class), // startDate
+                any(java.time.LocalDate.class), // endDate
+                any(Double.class), // discountPercentage
+                any(), // statusId (puede ser null)
+                eq(1), // userId (valor por defecto cuando es null)
+                eq(1) // categoryId (desde categoryDTO.getCategoryId())
+        )).thenThrow(new RuntimeException("Database error"));
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        GraphQLException exception = assertThrows(GraphQLException.class, () -> {
             graphQLResolver.updatePromotion(1, promotionDTO);
         });
+        assertEquals("UPDATE", exception.getOperation());
         assertTrue(exception.getMessage().contains("Failed to update promotion"));
     }
 

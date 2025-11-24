@@ -218,6 +218,75 @@ public class PromotionService {
     // === MÉTODOS CRUD PARA MUTACIONES ===
 
     /**
+     * Calcula automáticamente el estado de una promoción basado en sus fechas
+     * 
+     * @param startDate Fecha de inicio de la promoción
+     * @param endDate Fecha de fin de la promoción
+     * @return ID del estado apropiado (1=ACTIVE, 2=EXPIRED, 3=SCHEDULED)
+     */
+    private Integer calculatePromotionStatus(LocalDate startDate, LocalDate endDate) {
+        LocalDate today = LocalDate.now();
+        
+        // Si la fecha de fin ya pasó -> EXPIRED (2)
+        if (endDate != null && today.isAfter(endDate)) {
+            logger.info("🕐 Promoción marcada como EXPIRED: fecha fin {} es anterior a hoy {}", endDate, today);
+            return 2; // EXPIRED
+        }
+        
+        // Si la fecha de inicio es posterior a hoy -> SCHEDULED (3)
+        if (startDate != null && today.isBefore(startDate)) {
+            logger.info("📅 Promoción marcada como SCHEDULED: fecha inicio {} es posterior a hoy {}", startDate, today);
+            return 3; // SCHEDULED
+        }
+        
+        // Si estamos entre fecha inicio y fin (inclusive) -> ACTIVE (1)
+        logger.info("✅ Promoción marcada como ACTIVE: hoy {} está entre {} y {}", today, startDate, endDate);
+        return 1; // ACTIVE
+    }
+
+    /**
+     * Actualiza automáticamente los estados de todas las promociones basado en las fechas actuales
+     * Se puede llamar periódicamente o manualmente desde administración
+     */
+    @Transactional
+    public int updateAllPromotionStatuses() {
+        logger.info("🔄 Iniciando actualización automática de estados de promociones...");
+        
+        List<Promotion> allPromotions = promotionRepository.findAll();
+        int updatedCount = 0;
+        
+        for (Promotion promotion : allPromotions) {
+            Integer currentStatusId = promotion.getStatus() != null ? promotion.getStatus().getStatusId() : null;
+            Integer calculatedStatusId = calculatePromotionStatus(promotion.getStartDate(), promotion.getEndDate());
+            
+            // Solo actualizar si el estado cambió
+            if (currentStatusId == null || !currentStatusId.equals(calculatedStatusId)) {
+                Status newStatus = statusRepository.findById(calculatedStatusId).orElse(null);
+                if (newStatus != null) {
+                    String oldStatusName = currentStatusId != null ? promotion.getStatus().getStatusName() : "NULL";
+                    promotion.setStatus(newStatus);
+                    promotionRepository.save(promotion);
+                    
+                    logger.info("🔄 Promoción '{}' actualizada: {} -> {}", 
+                               promotion.getPromotionName(), oldStatusName, newStatus.getStatusName());
+                    
+                    // Si cambió a ACTIVE, disparar evento de notificación
+                    if (calculatedStatusId == 1 && (currentStatusId == null || !currentStatusId.equals(1))) {
+                        logger.info("🚨 Promoción '{}' cambió automáticamente a ACTIVE - Disparando evento", 
+                                   promotion.getPromotionName());
+                        eventPublisher.publishEvent(new PromotionActivatedEvent(this, promotion));
+                    }
+                    
+                    updatedCount++;
+                }
+            }
+        }
+        
+        logger.info("✅ Actualización automática completada: {} promociones actualizadas", updatedCount);
+        return updatedCount;
+    }
+
+    /**
      * Crea una nueva promoción
      */
     public Promotion createPromotion(String promotionName, String description, 
@@ -231,9 +300,25 @@ public class PromotionService {
         promotion.setEndDate(endDate);
         promotion.setDiscountValue(discountValue);
         
+        // 📅 VALIDACIÓN DE FECHAS: La fecha de fin no puede ser anterior a la fecha de inicio
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            logger.error("❌ Error de validación: La fecha de fin ({}) no puede ser anterior a la fecha de inicio ({})", 
+                        endDate, startDate);
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
+        
+        // 🤖 CÁLCULO AUTOMÁTICO DEL ESTADO basado en fechas (si no se proporciona statusId)
+        Integer finalStatusId = statusId;
+        if (statusId == null && startDate != null) {
+            finalStatusId = calculatePromotionStatus(startDate, endDate);
+            logger.info("🤖 Estado calculado automáticamente para '{}': statusId={}", promotionName, finalStatusId);
+        } else if (statusId != null) {
+            logger.info("📝 Usando estado manual para '{}': statusId={}", promotionName, statusId);
+        }
+        
         // Buscar y asignar entidades relacionadas
-        if (statusId != null) {
-            Status status = statusRepository.findById(statusId).orElse(null);
+        if (finalStatusId != null) {
+            Status status = statusRepository.findById(finalStatusId).orElse(null);
             promotion.setStatus(status);
         }
         
@@ -251,10 +336,10 @@ public class PromotionService {
         Promotion savedPromotion = promotionRepository.save(promotion);
         
         // 🔔 VERIFICAR SI SE CREA CON ESTADO ACTIVE Y DISPARAR EVENTO
-        if (statusId != null && savedPromotion.getStatus() != null) {
+        if (finalStatusId != null && savedPromotion.getStatus() != null) {
             String statusName = savedPromotion.getStatus().getStatusName();
             logger.info("🔍 Promoción '{}' creada con statusId={}, statusName='{}'", 
-                       savedPromotion.getPromotionName(), statusId, statusName);
+                       savedPromotion.getPromotionName(), finalStatusId, statusName);
             
             if (statusName.equalsIgnoreCase("ACTIVE")) {
                 logger.info("🚨 Nueva promoción '{}' creada con estado ACTIVE - Disparando evento de notificación", 
@@ -265,7 +350,7 @@ public class PromotionService {
             }
         } else {
             logger.warn("⚠️ Promoción '{}' creada pero sin estado definido: statusId={}, status={}", 
-                       savedPromotion.getPromotionName(), statusId, savedPromotion.getStatus());
+                       savedPromotion.getPromotionName(), finalStatusId, savedPromotion.getStatus());
         }
         
         return savedPromotion;
@@ -289,18 +374,46 @@ public class PromotionService {
                                   promotion.getStatus().getStatusName() : null;
         
         // Actualizar campos
+        boolean datesChanged = false;
         if (promotionName != null) promotion.setPromotionName(promotionName);
         if (description != null) promotion.setDescription(description);
-        if (startDate != null) promotion.setStartDate(startDate);
-        if (endDate != null) promotion.setEndDate(endDate);
+        if (startDate != null) {
+            promotion.setStartDate(startDate);
+            datesChanged = true;
+        }
+        if (endDate != null) {
+            promotion.setEndDate(endDate);
+            datesChanged = true;
+        }
         if (discountValue != null) promotion.setDiscountValue(discountValue);
+        
+        // 📅 VALIDACIÓN DE FECHAS: La fecha de fin no puede ser anterior a la fecha de inicio
+        LocalDate finalStartDate = startDate != null ? startDate : promotion.getStartDate();
+        LocalDate finalEndDate = endDate != null ? endDate : promotion.getEndDate();
+        
+        if (finalStartDate != null && finalEndDate != null && finalEndDate.isBefore(finalStartDate)) {
+            logger.error("❌ Error de validación en actualización: La fecha de fin ({}) no puede ser anterior a la fecha de inicio ({})", 
+                        finalEndDate, finalStartDate);
+            throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio");
+        }
+        
+        // 🤖 RECALCULAR ESTADO AUTOMÁTICAMENTE si las fechas cambiaron y no se proporciona statusId manual
+        Integer finalStatusId = statusId;
+        if (statusId == null && datesChanged) {
+            finalStatusId = calculatePromotionStatus(promotion.getStartDate(), promotion.getEndDate());
+            logger.info("🤖 Estado recalculado automáticamente para '{}' debido a cambio de fechas: statusId={}", 
+                       promotion.getPromotionName(), finalStatusId);
+        }
         
         // Actualizar entidades relacionadas
         String newStatusName = null;
-        if (statusId != null) {
-            Status status = statusRepository.findById(statusId).orElse(null);
+        if (finalStatusId != null) {
+            Status status = statusRepository.findById(finalStatusId).orElse(null);
             promotion.setStatus(status);
             newStatusName = status != null ? status.getStatusName() : null;
+        } else if (statusId == null && !datesChanged) {
+            // Mantener el estado actual si no hay cambios de fechas ni statusId manual
+            newStatusName = previousStatusName;
         }
         
         if (userId != null) {

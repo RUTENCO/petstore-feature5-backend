@@ -426,4 +426,39 @@ public class PromotionController {
             ));
         }
     }
+
+    /**
+     * Actualiza automáticamente los estados de todas las promociones basado en fechas
+     * POST /api/promotions/update-statuses
+     */
+    @PostMapping("/update-statuses")
+    @Operation(
+        summary = "Actualizar estados automáticamente",
+        description = "Recalcula y actualiza los estados de todas las promociones basándose en las fechas actuales. " +
+                     "ACTIVE: si la fecha actual está entre inicio y fin. " +
+                     "EXPIRED: si la fecha fin ya pasó. " +
+                     "SCHEDULED: si la fecha inicio es en el futuro.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Estados actualizados exitosamente"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    public ResponseEntity<Map<String, Object>> updateAllPromotionStatuses() {
+        try {
+            int updatedCount = promotionService.updateAllPromotionStatuses();
+            
+            return ResponseEntity.ok(java.util.Map.of(
+                SUCCESS_STATUS, true,
+                MESSAGE_KEY, String.format("Estados actualizados exitosamente. %d promociones modificadas", updatedCount),
+                "updatedCount", updatedCount
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of(
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error actualizando estados: " + e.getMessage()
+            ));
+        }
+    }
 }

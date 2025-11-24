@@ -365,7 +365,9 @@ class PromotionServiceTest {
         // Then
         assertNotNull(result);
         verify(promotionRepository).save(any(Promotion.class));
-        verifyNoInteractions(statusRepository, userRepository, categoryRepository);
+        // Ahora el statusRepository se usa para calcular automáticamente el estado
+        verify(statusRepository, times(1)).findById(anyInt());
+        verifyNoInteractions(userRepository, categoryRepository);
     }
 
     @Test

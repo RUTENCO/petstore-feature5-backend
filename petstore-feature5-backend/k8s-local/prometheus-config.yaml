@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      # - "first_rules.yml"
+      # - "second_rules.yml"
+
+    scrape_configs:
+      # Prometheus se monitorea a sí mismo
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Scrape de la aplicación PetStore (métricas de actuator)
+      - job_name: 'petstore-backend'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['petstore-service:8080']
+        scrape_interval: 10s
+
+      # Node Exporter para métricas de sistema (CPU, RAM, etc.)
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter-service:9100']
+        scrape_interval: 15s

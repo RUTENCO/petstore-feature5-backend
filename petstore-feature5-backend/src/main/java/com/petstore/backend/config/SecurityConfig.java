@@ -93,6 +93,12 @@ public class SecurityConfig {
                         loggerMessage.info("   Is Development: {}" , isDevelopment);
                     }
                     
+                    // Whitelist adicional si está configurada (DEBE IR PRIMERO para tener precedencia)
+                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
+                        loggerMessage.info("🔓 Aplicando whitelist de seguridad: {}", java.util.Arrays.toString(whitelistEndpoints));
+                        authz.requestMatchers(whitelistEndpoints).permitAll();
+                    }
+                    
                     // GraphiQL y GraphQL SIEMPRE PÚBLICOS (tanto dev como prod)
                     authz.requestMatchers("/graphiql", "/graphiql/**").permitAll();
                     authz.requestMatchers("/graphql", "/graphql/**").permitAll();
@@ -125,11 +131,6 @@ public class SecurityConfig {
                         // Productos: solo lectura pública, modificaciones requieren auth
                         authz.requestMatchers("GET", "/api/products", "/api/products/category/*").permitAll();
                         authz.requestMatchers(PRODUCTAPIPATTERN).authenticated();
-                    }
-                    
-                    // Whitelist adicional si está configurada (debe ir ANTES de las reglas específicas)
-                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
-                        authz.requestMatchers(whitelistEndpoints).permitAll();
                     }
                     
                     // Promociones siempre requieren autenticación (excepto algunas lecturas públicas)

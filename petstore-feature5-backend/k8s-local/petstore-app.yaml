@@ -1,0 +1,146 @@
+# PetStore Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petstore-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: petstore
+  template:
+    metadata:
+      labels:
+        app: petstore
+    spec:
+      containers:
+        - name: petstore-app
+          image: petstore-backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            # Spring Profile
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: SPRING_PROFILES_ACTIVE
+            
+            # Database Configuration for DEV profile (LOCAL vars)
+            - name: DB_HOST_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_HOST_LOCAL
+            - name: DB_PORT_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_PORT_LOCAL
+            - name: DB_NAME_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_NAME_LOCAL
+            - name: DB_USER_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_USER_LOCAL
+            - name: DB_PASSWORD_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_PASSWORD_LOCAL
+            - name: DB_SSLMODE_LOCAL
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_SSLMODE_LOCAL
+            
+            # Database Configuration for PROD profile (PROD vars - backup)
+            - name: DB_HOST_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_HOST_PROD
+            - name: DB_PORT_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_PORT_PROD
+            - name: DB_NAME_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_NAME_PROD
+            - name: DB_USER_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_USER_PROD
+            - name: DB_PASSWORD_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_PASSWORD_PROD
+            - name: DB_SSLMODE_PROD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: DB_SSLMODE_PROD
+            
+            # JWT Configuration
+            - name: SECRET
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: SECRET
+            - name: EXPIRATION
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: EXPIRATION
+            
+            # Additional Configuration
+            - name: RESEND_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: RESEND_API_KEY
+            - name: RESEND_FROM
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: RESEND_FROM
+            - name: RESEND_TO
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: RESEND_TO
+            - name: RESEND_FROM_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: RESEND_FROM_NAME
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+# PetStore Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: petstore-service
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: petstore
+  type: LoadBalancer

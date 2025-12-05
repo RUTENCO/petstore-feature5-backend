@@ -1001,11 +1001,9 @@ class GraphQLResolverTest {
         promotionDTO.setStartDate(java.time.LocalDate.now());
         promotionDTO.setEndDate(java.time.LocalDate.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(20.0));
-        
-        // Create a category DTO to avoid null pointer
-        com.petstore.backend.dto.CategoryDTO categoryDTO = new com.petstore.backend.dto.CategoryDTO();
-        categoryDTO.setCategoryId(1);
-        promotionDTO.setCategory(categoryDTO);
+        promotionDTO.setCategoryId(1);
+        promotionDTO.setStatusId(1);
+        promotionDTO.setUserId(1);
         
         when(promotionService.createPromotion(anyString(), anyString(), 
                 any(java.time.LocalDate.class), any(java.time.LocalDate.class), any(Double.class), 
@@ -1013,7 +1011,7 @@ class GraphQLResolverTest {
                 .thenThrow(new RuntimeException("Database error"));
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        GraphQLException exception = assertThrows(GraphQLException.class, () -> {
             graphQLResolver.createPromotion(promotionDTO);
         });
         assertTrue(exception.getMessage().contains("Failed to create promotion"));

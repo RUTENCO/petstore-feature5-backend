@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+data:
+  # PostgreSQL configuration (para el pod de PostgreSQL)
+  POSTGRES_DB: "petstore"
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres123"
+  
+  # Application Database configuration for DEV profile (LOCAL vars)
+  DB_HOST_LOCAL: "postgres"
+  DB_PORT_LOCAL: "5432"
+  DB_NAME_LOCAL: "petstore"
+  DB_USER_LOCAL: "postgres"
+  DB_PASSWORD_LOCAL: "postgres123"
+  DB_SSLMODE_LOCAL: "disable"
+  
+  # Application Database configuration for PROD profile (PROD vars)
+  DB_HOST_PROD: "postgres"
+  DB_PORT_PROD: "5432"
+  DB_NAME_PROD: "petstore"
+  DB_USER_PROD: "postgres"
+  DB_PASSWORD_PROD: "postgres123"
+  DB_SSLMODE_PROD: "disable"
+  
+  # Spring configuration
+  SPRING_PROFILES_ACTIVE: "dev"
+  
+  # JWT configuration
+  SECRET: "una-clave-secreta-larga-y-aleatoria-para-kubernetes-jwt-token-encryption"
+  EXPIRATION: "86400000"
+  
+  # Email configuration (RESEND)
+  RESEND_API_KEY: "test-api-key-for-development"
+  RESEND_FROM: "onboarding@resend.dev"
+  RESEND_TO: "petstorenotifications@gmail.com"
+  RESEND_FROM_NAME: "PetStore Notifications"
